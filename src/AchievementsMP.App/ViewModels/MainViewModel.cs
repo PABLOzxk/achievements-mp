@@ -1,0 +1,56 @@
+using System.Collections.ObjectModel;
+using AchievementsMP.App.Services;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+
+namespace AchievementsMP.App.ViewModels;
+
+public sealed partial class MainViewModel : ObservableObject
+{
+    public MainViewModel(OverviewViewModel overview, LibraryViewModel library, GameDetailsViewModel details, PlannerViewModel planner, SettingsViewModel settings, StatusInfo status)
+    {
+        Pages = [overview, library, details, planner];
+        Settings = settings;
+        Status = status;
+        overview.NavigateToSettings = () => Navigate(settings);
+        _currentPage = overview;
+        overview.IsActive = true;
+    }
+
+    public ObservableCollection<PageViewModel> Pages { get; }
+    public SettingsViewModel Settings { get; }
+    public StatusInfo Status { get; }
+
+    [ObservableProperty]
+    private PageViewModel _currentPage;
+
+    partial void OnCurrentPageChanged(PageViewModel? oldValue, PageViewModel newValue)
+    {
+        if (oldValue is not null) oldValue.IsActive = false;
+        newValue.IsActive = true;
+        _ = LoadAsync(newValue);
+    }
+
+    [RelayCommand]
+    private void Navigate(PageViewModel page) => CurrentPage = page;
+
+    public Task InitializeAsync() => LoadAsync(CurrentPage);
+
+    private static async Task LoadAsync(PageViewModel page)
+    {
+        try
+        {
+            await page.OnNavigatedToAsync();
+        }
+        catch (Exception ex)
+        {
+            FileLog.Error($"Falha ao abrir a página {page.Title}", ex);
+        }
+    }
+}
+
+/// <summary>Informações do rodapé: onde estão os dados e em que versão o banco está.</summary>
+public sealed record StatusInfo(string DataFolder, int SchemaVersion, string AppVersion)
+{
+    public string Text => $"Dados em {DataFolder}  ·  banco v{SchemaVersion}  ·  app v{AppVersion}";
+}

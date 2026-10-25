@@ -1,0 +1,58 @@
+<UserControl x:Class="AchievementsMP.App.Views.OverviewView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel>
+        <TextBlock Text="Visão geral" Style="{StaticResource PageTitle}" />
+        <TextBlock Text="Seu progresso em conquistas, em um só lugar." Style="{StaticResource PageSubtitle}" />
+
+        <!-- Primeira execução -->
+        <Border Style="{StaticResource Card}" Margin="0,24,0,0" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1,0,0,0"
+                Visibility="{Binding NeedsSetup, Converter={StaticResource BoolToVisibility}}">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" Content="Configurar Steam"
+                        Command="{Binding OpenSettingsCommand}" VerticalAlignment="Center" Margin="16,0,0,0" />
+                <StackPanel>
+                    <TextBlock Text="Conecte sua conta Steam" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Style="{StaticResource Body}" Margin="0,4,0,0"
+                               Text="Você vai precisar do link do seu perfil e de uma chave pessoal da Steam Web API. Nenhuma senha é pedida." />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Indicadores -->
+        <UniformGrid Columns="4" Margin="-8,24,-8,0">
+            <Border Style="{StaticResource Card}" Margin="8">
+                <StackPanel>
+                    <TextBlock Text="JOGOS" Style="{StaticResource SectionTitle}" />
+                    <TextBlock Text="{Binding GameCount}" Style="{StaticResource StatValue}" />
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="8">
+                <StackPanel>
+                    <TextBlock Text="CONQUISTAS DESBLOQUEADAS" Style="{StaticResource SectionTitle}" />
+                    <TextBlock Text="{Binding UnlockedCount}" Style="{StaticResource StatValue}" />
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="8">
+                <StackPanel>
+                    <TextBlock Text="JOGOS EM 100%" Style="{StaticResource SectionTitle}" />
+                    <TextBlock Text="{Binding CompletedGames}" Style="{StaticResource StatValue}" Foreground="{StaticResource SuccessBrush}" />
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="8">
+                <StackPanel>
+                    <TextBlock Text="ACIMA DE 80%" Style="{StaticResource SectionTitle}" />
+                    <TextBlock Text="{Binding NearlyComplete}" Style="{StaticResource StatValue}" Foreground="{StaticResource AccentBrush}" />
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+            <StackPanel>
+                <TextBlock Text="METAS EM ANDAMENTO" Style="{StaticResource SectionTitle}" />
+                <TextBlock Style="{StaticResource Body}" Foreground="{StaticResource TextMutedBrush}"
+                           Text="As metas e conquistas prioritárias aparecem aqui depois da primeira sincronização (Fase 2) e do planejador (Fase 4)." />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

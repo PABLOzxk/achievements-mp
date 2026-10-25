@@ -1,0 +1,4 @@
+{"game":{"gameName":"Portal 2","gameVersion":"98","availableGameStats":{"achievements":[
+ {"name":"ACH_SURVIVE_CONTAINER_RIDE","defaultvalue":0,"displayName":"Wake Up Call","hidden":0,"description":"Survive the manual override.","icon":"https://cdn/x.jpg","icongray":"https://cdn/x_g.jpg"},
+ {"name":"ACH_SECRET","defaultvalue":0,"displayName":"Secret","hidden":1,"icon":"https://cdn/s.jpg","icongray":"https://cdn/s_g.jpg"}
+]}}}

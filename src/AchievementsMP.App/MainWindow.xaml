@@ -1,0 +1,74 @@
+<Window x:Class="AchievementsMP.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:AchievementsMP.App.ViewModels"
+        xmlns:views="clr-namespace:AchievementsMP.App.Views"
+        Title="Achievements MP" Width="1280" Height="800" MinWidth="960" MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource WindowBrush}"
+        FontFamily="{StaticResource UiFont}"
+        TextOptions.TextFormattingMode="Display">
+    <Window.Resources>
+        <DataTemplate DataType="{x:Type vm:OverviewViewModel}"><views:OverviewView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SettingsViewModel}"><views:SettingsView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:PlaceholderPageViewModel}"><views:PlaceholderView /></DataTemplate>
+
+        <DataTemplate x:Key="NavContent">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding Glyph}" FontFamily="{StaticResource IconFont}" FontSize="16" Width="28" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+            </StackPanel>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="232" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Navegação lateral -->
+        <DockPanel Grid.Column="0" Grid.Row="0" Background="{StaticResource WindowBrush}">
+            <StackPanel DockPanel.Dock="Top" Margin="20,22,20,24">
+                <TextBlock Text="ACHIEVEMENTS" FontSize="18" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" />
+                <TextBlock Text="MP · painel de conquistas" FontSize="12" Foreground="{StaticResource AccentBrush}" Margin="0,2,0,0" />
+            </StackPanel>
+
+            <RadioButton DockPanel.Dock="Bottom" Margin="0,0,0,16" Style="{StaticResource NavItem}"
+                         DataContext="{Binding Settings}"
+                         IsChecked="{Binding IsActive, Mode=OneWay}"
+                         Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                         CommandParameter="{Binding}"
+                         Content="{Binding}" ContentTemplate="{StaticResource NavContent}" />
+
+            <ItemsControl ItemsSource="{Binding Pages}" Focusable="False">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <RadioButton Style="{StaticResource NavItem}"
+                                     IsChecked="{Binding IsActive, Mode=OneWay}"
+                                     Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                     CommandParameter="{Binding}"
+                                     Content="{Binding}" ContentTemplate="{StaticResource NavContent}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </DockPanel>
+
+        <!-- Conteúdo -->
+        <Border Grid.Column="1" Grid.Row="0" Background="{StaticResource SurfaceGradientBrush}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ContentControl Content="{Binding CurrentPage}" Margin="40,32,40,32" Focusable="False" />
+            </ScrollViewer>
+        </Border>
+
+        <!-- Rodapé -->
+        <Border Grid.Row="1" Grid.ColumnSpan="2" Background="{StaticResource WindowBrush}" Padding="20,6"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+            <TextBlock Text="{Binding Status.Text}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
+        </Border>
+    </Grid>
+</Window>

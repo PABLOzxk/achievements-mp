@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AchievementsMP.App/AchievementsMP.App.csproj" />
+    <Project Path="src/AchievementsMP.Core/AchievementsMP.Core.csproj" />
+    <Project Path="src/AchievementsMP.Data/AchievementsMP.Data.csproj" />
+    <Project Path="src/AchievementsMP.Steam/AchievementsMP.Steam.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AchievementsMP.Tests/AchievementsMP.Tests.csproj" />
+  </Folder>
+</Solution>

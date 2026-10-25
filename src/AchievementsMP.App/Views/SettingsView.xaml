@@ -1,0 +1,67 @@
+<UserControl x:Class="AchievementsMP.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel MaxWidth="760" HorizontalAlignment="Left">
+        <TextBlock Text="Configurações" Style="{StaticResource PageTitle}" />
+        <TextBlock Text="Tudo fica salvo só neste computador." Style="{StaticResource PageSubtitle}" />
+
+        <!-- Conta Steam -->
+        <Border Style="{StaticResource Card}" Margin="0,24,0,0">
+            <StackPanel>
+                <TextBlock Text="PERFIL STEAM" Style="{StaticResource SectionTitle}" />
+                <TextBox Text="{Binding SteamProfile, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBlock Text="{Binding ProfileHint}" Style="{StaticResource Hint}" />
+
+                <TextBlock Text="CHAVE DA STEAM WEB API" Style="{StaticResource SectionTitle}" Margin="0,20,0,8" />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Remover" Margin="8,0,0,0" Command="{Binding RemoveApiKeyCommand}" />
+                    <PasswordBox x:Name="ApiKeyBox" PasswordChanged="OnApiKeyChanged" />
+                </DockPanel>
+                <TextBlock Text="{Binding ApiKeyStatus}" Style="{StaticResource Hint}" />
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <Button Style="{StaticResource LinkButton}" Content="Obter minha chave na Steam" Command="{Binding OpenApiKeyPageCommand}" />
+                    <TextBlock Text="  ·  " Foreground="{StaticResource TextMutedBrush}" />
+                    <Button Style="{StaticResource LinkButton}" Content="Abrir configurações de privacidade" Command="{Binding OpenPrivacyPageCommand}" />
+                </StackPanel>
+                <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
+                           Text="A chave é sua e pessoal. Ela fica criptografada pelo Windows (DPAPI) e só funciona na sua conta deste computador. Para ver conquistas, o perfil e os “Detalhes do jogo” precisam estar públicos." />
+            </StackPanel>
+        </Border>
+
+        <!-- Sincronização -->
+        <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+            <StackPanel>
+                <TextBlock Text="SINCRONIZAÇÃO" Style="{StaticResource SectionTitle}" />
+                <CheckBox Content="Sincronizar ao abrir o app" IsChecked="{Binding SyncOnStartup}" />
+                <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                    <TextBlock Text="Atualizar a biblioteca a cada" Style="{StaticResource Body}" VerticalAlignment="Center" />
+                    <TextBox Text="{Binding SyncIntervalHours, UpdateSourceTrigger=PropertyChanged}" Width="56" Margin="10,0" HorizontalContentAlignment="Center" />
+                    <TextBlock Text="horas" Style="{StaticResource Body}" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <TextBlock Text="IDIOMA DAS CONQUISTAS" Style="{StaticResource SectionTitle}" Margin="0,20,0,8" />
+                <ComboBox ItemsSource="{Binding Languages}" DisplayMemberPath="Label" SelectedValuePath="Code"
+                          SelectedValue="{Binding Language}" Width="280" HorizontalAlignment="Left" />
+                <TextBlock Style="{StaticResource Hint}" Text="Nomes e descrições vêm da Steam. Se o jogo não tiver tradução, aparecem em inglês." />
+            </StackPanel>
+        </Border>
+
+        <!-- Dados -->
+        <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Abrir pasta" Command="{Binding OpenDataFolderCommand}" VerticalAlignment="Center" />
+                <StackPanel>
+                    <TextBlock Text="DADOS LOCAIS" Style="{StaticResource SectionTitle}" />
+                    <TextBlock Text="{Binding DataFolder}" Style="{StaticResource Body}" />
+                    <TextBlock Style="{StaticResource Hint}" Text="Banco SQLite, backups automáticos antes de cada atualização de esquema e logs." />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+            <Button Style="{StaticResource PrimaryButton}" Content="Salvar" Command="{Binding SaveCommand}" />
+            <Button Content="Salvar e testar conexão" Margin="10,0,0,0" Command="{Binding TestConnectionCommand}" />
+            <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource Body}" Margin="16,0,0,0" VerticalAlignment="Center" MaxWidth="360" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

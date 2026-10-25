@@ -1,0 +1,29 @@
+<UserControl x:Class="AchievementsMP.App.Views.PlaceholderView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel>
+        <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitle}" />
+        <TextBlock Text="{Binding Summary}" Style="{StaticResource PageSubtitle}" />
+
+        <Border Style="{StaticResource Card}" Margin="0,24,0,0" MaxWidth="720" HorizontalAlignment="Left">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                    <TextBlock Text="&#xE823;" FontFamily="{StaticResource IconFont}" FontSize="16" Foreground="{StaticResource WarningBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Phase, StringFormat='Em construção · {0}'}" Margin="10,0,0,0" FontWeight="SemiBold"
+                               Foreground="{StaticResource WarningBrush}" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Text="O QUE VAI TER AQUI" Style="{StaticResource SectionTitle}" />
+                <ItemsControl ItemsSource="{Binding Planned}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="0,4">
+                                <TextBlock Text="•" Foreground="{StaticResource AccentBrush}" Margin="0,0,10,0" />
+                                <TextBlock Text="{Binding}" Style="{StaticResource Body}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>
