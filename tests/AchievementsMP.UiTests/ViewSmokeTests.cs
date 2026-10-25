@@ -31,6 +31,13 @@ public class ViewSmokeTests
     {
         var bindingErrors = BindingErrorListener.Attach();
 
+        // Prova de que o detector funciona: um binding com nome errado precisa ser pego.
+        var probe = new TextBlock();
+        probe.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding("PropriedadeQueNaoExiste"));
+        Render(probe, new object());
+        Assert.Single(bindingErrors.Errors);
+        bindingErrors.Errors.Clear();
+
         var app = new AchievementsMP.App.App();
         app.InitializeComponent();
 
