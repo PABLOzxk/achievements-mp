@@ -5,6 +5,17 @@
         <ResourceDictionary Source="Colors.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
+    <!-- Foco de teclado: só aparece navegando com Tab, nunca depois de um clique. -->
+    <Style x:Key="KeyboardFocusTight">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="-2" CornerRadius="4" BorderThickness="1" BorderBrush="{StaticResource AccentBrush}" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Texto -->
     <Style x:Key="PageTitle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="28" />
@@ -53,7 +64,7 @@
         <Setter Property="FontSize" Value="14" />
         <Setter Property="Padding" Value="16,8" />
         <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusTight}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -64,9 +75,6 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.88" />
-                        </Trigger>
-                        <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.7" />
@@ -144,6 +152,7 @@
         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusTight}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
@@ -159,9 +168,6 @@
                             <Setter TargetName="Box" Property="Background" Value="{StaticResource AccentBrush}" />
                             <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
                             <Setter TargetName="Mark" Property="Visibility" Value="Visible" />
-                        </Trigger>
-                        <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -236,13 +242,24 @@
         </Setter>
     </Style>
 
+    <Style x:Key="KeyboardFocus">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="8,2" CornerRadius="3" BorderThickness="1" BorderBrush="{StaticResource AccentBrush}" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Navegação lateral -->
     <Style x:Key="NavItem" TargetType="RadioButton">
         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="GroupName" Value="Nav" />
-        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <!-- FocusVisualStyle só aparece na navegação por teclado (Tab), não no clique. -->
+        <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocus}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
@@ -261,9 +278,6 @@
                             <Setter TargetName="Bd" Property="Background" Value="#1F66C0F4" />
                             <Setter TargetName="Indicator" Property="Visibility" Value="Visible" />
                             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-                        </Trigger>
-                        <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

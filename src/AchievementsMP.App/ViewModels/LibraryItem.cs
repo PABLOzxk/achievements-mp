@@ -23,7 +23,8 @@ public sealed record LibraryItem(
         var p = g.Progress;
         var progressText = p.Total switch
         {
-            > 0 => $"{p.Unlocked} de {p.Total}" + (p.Unknown > 0 ? $" · {p.Unknown} sem dados" : ""),
+            > 0 when p.IsComplete => $"{p.Unlocked} de {p.Total}",
+            > 0 => $"{p.Unlocked} de {p.Total} · faltam {p.KnownRemaining}" + (p.Unknown > 0 ? $" · {p.Unknown} sem dados" : ""),
             _ => g.Availability switch
             {
                 DataAvailability.NoAchievements => "Sem conquistas",

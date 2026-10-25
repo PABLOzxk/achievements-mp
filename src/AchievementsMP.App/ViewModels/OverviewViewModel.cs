@@ -29,11 +29,12 @@ public sealed partial class OverviewViewModel(SteamCatalogRepository catalog, Ac
         HasData = library.Any(g => g.Progress.Total > 0);
         NeedsSetup = string.IsNullOrEmpty(await secrets.GetSteamApiKeyAsync());
 
-        // Mais perto de 100%: maior percentual, desempate por menos conquistas faltando. Só com dados completos.
+        // Mais perto de 100% = menos conquistas faltando (8 de 21 está mais perto que 31 de 80).
+        // Desempate pelo percentual. Só jogos já começados e com dados completos.
         Closest = library
             .Where(g => g.Progress.Total > 0 && !g.Progress.IsComplete && g.Progress.IsExact && g.Progress.Unlocked > 0)
-            .OrderByDescending(g => g.Progress.Percent)
-            .ThenBy(g => g.Progress.KnownRemaining)
+            .OrderBy(g => g.Progress.KnownRemaining)
+            .ThenByDescending(g => g.Progress.Percent)
             .Take(6)
             .Select(LibraryItem.From)
             .ToList();
