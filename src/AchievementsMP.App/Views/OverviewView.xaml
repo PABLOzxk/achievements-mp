@@ -50,11 +50,26 @@
     
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <StackPanel>
-                    <TextBlock Text="MAIS PERTO DE 100%" Style="{StaticResource SectionTitle}" />
-                    <ItemsControl ItemsSource="{Binding Closest}" ItemTemplate="{StaticResource GameRow}" />
+                    <TextBlock Text="MENOS CONQUISTAS FALTANDO" Style="{StaticResource SectionTitle}" />
+                    <ListBox ItemsSource="{Binding Closest}" ItemTemplate="{StaticResource GameRow}" ItemContainerStyle="{StaticResource GameListItem}"
+                             Style="{StaticResource PlainList}" />
                     <TextBlock Style="{StaticResource Body}" Foreground="{StaticResource TextMutedBrush}"
                                Visibility="{Binding HasData, Converter={StaticResource InverseBoolToVisibility}}"
                                Text="Aparece aqui depois da primeira sincronização. Use “Sincronizar agora”, no canto inferior esquerdo." />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0" Visibility="{Binding HasData, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Text="MAIS VIÁVEIS DE COMPLETAR" Style="{StaticResource SectionTitle}" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,-4,0,10"
+                               Text="Jogos começados em que a conquista mais rara que falta é a mais comum. Viabilidade = raridade global, não dificuldade real." />
+                    <ListBox ItemsSource="{Binding MostViable}" ItemTemplate="{StaticResource GameRow}" ItemContainerStyle="{StaticResource GameListItem}"
+                             Style="{StaticResource PlainList}"
+                             Visibility="{Binding HasViable, Converter={StaticResource BoolToVisibility}}" />
+                    <TextBlock Style="{StaticResource Body}" Foreground="{StaticResource TextMutedBrush}"
+                               Visibility="{Binding HasViable, Converter={StaticResource InverseBoolToVisibility}}"
+                               Text="Nenhum jogo começado tem todas as conquistas restantes acima de 1% dos jogadores." />
                 </StackPanel>
             </Border>
 

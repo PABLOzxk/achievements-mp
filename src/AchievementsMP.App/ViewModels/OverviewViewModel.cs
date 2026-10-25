@@ -1,15 +1,20 @@
+using AchievementsMP.Core.Library;
+using AchievementsMP.Core.Progress;
 using AchievementsMP.Data.Repositories;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace AchievementsMP.App.ViewModels;
 
-public sealed partial class OverviewViewModel(SteamCatalogRepository catalog, AchievementsMP.Core.Settings.ISecretStore secrets) : PageViewModel
+public sealed partial class OverviewViewModel(SteamCatalogRepository catalog, AchievementsMP.Core.Settings.ISecretStore secrets) : PageViewModel, IGameOpener
 {
     public override string Title => "Visão geral";
     public override string Glyph => "\uE80F";
 
     internal Action? NavigateToSettings { get; set; }
+    internal Action<long>? NavigateToGame { get; set; }
+
+    public void OpenGame(long appId) => NavigateToGame?.Invoke(appId);
 
     [ObservableProperty] private int _gameCount;
     [ObservableProperty] private int _unlockedCount;
@@ -18,6 +23,8 @@ public sealed partial class OverviewViewModel(SteamCatalogRepository catalog, Ac
     [ObservableProperty] private bool _hasData;
     [ObservableProperty] private bool _needsSetup;
     [ObservableProperty] private IReadOnlyList<LibraryItem> _closest = [];
+    [ObservableProperty] private IReadOnlyList<LibraryItem> _mostViable = [];
+    [ObservableProperty] private bool _hasViable;
 
     public override async Task OnNavigatedToAsync()
     {
@@ -36,8 +43,20 @@ public sealed partial class OverviewViewModel(SteamCatalogRepository catalog, Ac
             .OrderBy(g => g.Progress.KnownRemaining)
             .ThenByDescending(g => g.Progress.Percent)
             .Take(6)
-            .Select(LibraryItem.From)
+            .Select(g => LibraryItem.From(g))
             .ToList();
+
+        // Mais viáveis: começados, e as que faltam são as mais comuns (raridade da mais rara que falta).
+        MostViable = LibraryQuery.Apply(library, new LibraryFilter
+            {
+                Status = LibraryStatus.InProgress,
+                MinViability = Viability.Low,
+                Sort = LibrarySort.MostViable,
+            })
+            .Take(6)
+            .Select(g => LibraryItem.From(g))
+            .ToList();
+        HasViable = MostViable.Count > 0;
     }
 
     [RelayCommand]

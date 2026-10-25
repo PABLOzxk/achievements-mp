@@ -1,24 +1,10 @@
 using AchievementsMP.Core.Domain;
+using AchievementsMP.Core.Library;
 using AchievementsMP.Core.Progress;
 using AchievementsMP.Core.Sync;
 using Dapper;
 
 namespace AchievementsMP.Data.Repositories;
-
-public sealed record LibraryGame(
-    long AppId,
-    string Name,
-    string? IconHash,
-    int PlaytimeMinutes,
-    DateTimeOffset? LastPlayedUtc,
-    bool IsOwned,
-    DataAvailability Availability,
-    DateTimeOffset? PlayerSyncedUtc,
-    string? LastError,
-    GameProgress Progress)
-{
-    public string? IconUrl => IconHash is null ? null : $"https://media.steampowered.com/steamcommunity/public/images/apps/{AppId}/{IconHash}.jpg";
-}
 
 /// <summary>
 /// Escreve os dados oficiais da Steam. Todas as escritas são upserts idempotentes e nunca apagam linhas:
@@ -151,6 +137,27 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
         await tx.CommitAsync(ct);
     }
 
+    public async Task<LibraryGame?> GetGameAsync(long appId, CancellationToken ct = default) =>
+        (await QueryLibraryAsync("WHERE g.app_id = @appId", new { appId }, ct)).SingleOrDefault();
+
+    /// <summary>Conquistas atuais do jogo (sem as removidas do esquema), com estado e raridade.</summary>
+    public async Task<IReadOnlyList<AchievementDetail>> GetAchievementsAsync(long appId, CancellationToken ct = default)
+    {
+        await using var c = await factory.OpenAsync(ct);
+        var rows = await c.QueryAsync<AchievementRow>(new CommandDefinition("""
+            SELECT a.app_id AS AppId, a.api_name AS ApiName, a.display_name AS DisplayName, a.description AS Description,
+                   a.hidden AS Hidden, a.icon_url AS IconUrl, a.icon_gray_url AS IconGrayUrl,
+                   p.state AS State, p.unlocked_utc AS UnlockedUtc, gs.percent AS GlobalPercent
+            FROM achievements a
+            LEFT JOIN player_achievements p ON p.app_id = a.app_id AND p.api_name = a.api_name
+            LEFT JOIN achievement_global_stats gs ON gs.app_id = a.app_id AND gs.api_name = a.api_name
+            WHERE a.app_id = @appId AND a.is_removed = 0
+            """, new { appId }, cancellationToken: ct));
+        return rows.Select(r => new AchievementDetail(
+            r.AppId, r.ApiName, r.DisplayName, r.Description, r.Hidden != 0, r.IconUrl, r.IconGrayUrl,
+            (UnlockState)(r.State ?? 0), Time.FromUnix(r.UnlockedUtc), r.GlobalPercent)).ToList();
+    }
+
     /// <summary>Registra por que os dados de um jogo estão incompletos, sem alterar o progresso já salvo.</summary>
     public async Task SetAvailabilityAsync(long appId, DataAvailability availability, string? error = null, CancellationToken ct = default)
     {
@@ -229,19 +236,26 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
                    g.player_synced_utc AS PlayerSyncedUtc, g.last_error AS LastError,
                    COUNT(a.api_name) AS Total,
                    COALESCE(SUM(CASE WHEN p.state = 2 THEN 1 ELSE 0 END), 0) AS Unlocked,
-                   COALESCE(SUM(CASE WHEN p.state = 1 THEN 1 ELSE 0 END), 0) AS Locked
+                   COALESCE(SUM(CASE WHEN p.state = 1 THEN 1 ELSE 0 END), 0) AS Locked,
+                   MIN(CASE WHEN p.state = 1 THEN gs.percent END) AS RarestRemaining,
+                   COALESCE(SUM(CASE WHEN p.state = 1 AND gs.percent IS NULL THEN 1 ELSE 0 END), 0) AS RemainingWithoutRarity
             FROM games g
             LEFT JOIN achievements a ON a.app_id = g.app_id AND a.is_removed = 0
             LEFT JOIN player_achievements p ON p.app_id = a.app_id AND p.api_name = a.api_name
+            LEFT JOIN achievement_global_stats gs ON gs.app_id = a.app_id AND gs.api_name = a.api_name
             {where}
             GROUP BY g.app_id
             ORDER BY g.name COLLATE NOCASE
             """, args, cancellationToken: ct));
 
-        return rows.Select(r => new LibraryGame(
-            r.AppId, r.Name, r.IconHash, (int)r.PlaytimeMinutes, Time.FromUnix(r.LastPlayedUtc), r.IsOwned != 0,
-            (DataAvailability)r.Availability, Time.FromUnix(r.PlayerSyncedUtc), r.LastError,
-            new GameProgress((int)r.Total, (int)r.Unlocked, (int)r.Locked, (int)(r.Total - r.Unlocked - r.Locked)))).ToList();
+        return rows.Select(r =>
+        {
+            var progress = new GameProgress((int)r.Total, (int)r.Unlocked, (int)r.Locked, (int)(r.Total - r.Unlocked - r.Locked));
+            return new LibraryGame(
+                r.AppId, r.Name, r.IconHash, (int)r.PlaytimeMinutes, Time.FromUnix(r.LastPlayedUtc), r.IsOwned != 0,
+                (DataAvailability)r.Availability, Time.FromUnix(r.PlayerSyncedUtc), r.LastError, progress,
+                CompletionOutlook.From(progress, r.RarestRemaining, (int)r.RemainingWithoutRarity));
+        }).ToList();
     }
 
     private sealed class LibraryRow
@@ -258,6 +272,8 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
         public long Total { get; init; }
         public long Unlocked { get; init; }
         public long Locked { get; init; }
+        public double? RarestRemaining { get; init; }
+        public long RemainingWithoutRarity { get; init; }
     }
 
     private sealed class SyncRow
@@ -273,5 +289,19 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
         public long? PlayerSyncedUtc { get; init; }
         public long? PlayerSyncedPlaytime { get; init; }
         public long AchievementCount { get; init; }
+    }
+
+    private sealed class AchievementRow
+    {
+        public long AppId { get; init; }
+        public string ApiName { get; init; } = "";
+        public string DisplayName { get; init; } = "";
+        public string? Description { get; init; }
+        public long Hidden { get; init; }
+        public string? IconUrl { get; init; }
+        public string? IconGrayUrl { get; init; }
+        public long? State { get; init; }
+        public long? UnlockedUtc { get; init; }
+        public double? GlobalPercent { get; init; }
     }
 }

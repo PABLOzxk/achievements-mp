@@ -111,6 +111,25 @@ public partial class App : Application
         Shutdown(1);
     }
 
+    // Linhas de jogo (estilo GameListItem em App.xaml): clique ou Enter abrem os detalhes.
+    private void OnGameRowClick(object sender, System.Windows.Input.MouseButtonEventArgs e) => OpenGameFromRow(sender);
+
+    private void OnGameRowKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Enter)
+        {
+            OpenGameFromRow(sender);
+            e.Handled = true;
+        }
+    }
+
+    private static void OpenGameFromRow(object sender)
+    {
+        if (sender is System.Windows.Controls.ListBoxItem { DataContext: LibraryItem item } row
+            && System.Windows.Controls.ItemsControl.ItemsControlFromItemContainer(row)?.DataContext is IGameOpener opener)
+            opener.OpenGame(item.AppId);
+    }
+
     protected override void OnExit(ExitEventArgs e)
     {
         _services?.Dispose();

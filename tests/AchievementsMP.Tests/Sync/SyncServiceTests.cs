@@ -1,5 +1,6 @@
 using AchievementsMP.Core.Domain;
 using AchievementsMP.Core.Settings;
+using AchievementsMP.Core.Library;
 using AchievementsMP.Data.Repositories;
 using AchievementsMP.Steam;
 using AchievementsMP.Sync;

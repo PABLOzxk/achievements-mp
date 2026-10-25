@@ -12,23 +12,80 @@
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
             <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
 
-            <!-- Linha de jogo (biblioteca e visão geral) -->
+            <!-- Linha de jogo (biblioteca e visão geral). Clique ou Enter abre os detalhes. -->
+            <Style x:Key="GameListItem" TargetType="ListBoxItem">
+                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="Cursor" Value="Hand" />
+                <EventSetter Event="PreviewMouseLeftButtonUp" Handler="OnGameRowClick" />
+                <EventSetter Event="KeyDown" Handler="OnGameRowKeyDown" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                            <Border x:Name="Bd" Background="{StaticResource CardBrush}" Margin="0,0,0,2" Padding="12,0" CornerRadius="2"
+                                    BorderThickness="1" BorderBrush="Transparent">
+                                <ContentPresenter />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource CardHoverBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Lista sem rolagem própria (dentro de páginas que já rolam): não "rouba" a roda do mouse. -->
+            <Style x:Key="PlainList" TargetType="ListBox">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListBox">
+                            <ItemsPresenter />
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="ViabilityChip" TargetType="Border" BasedOn="{StaticResource Chip}">
+                <Setter Property="Visibility" Value="Visible" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Viability}" Value="Unknown"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                    <DataTrigger Binding="{Binding Viability}" Value="Done"><Setter Property="Background" Value="#33A4D007" /></DataTrigger>
+                    <DataTrigger Binding="{Binding Viability}" Value="High"><Setter Property="Background" Value="#33A4D007" /></DataTrigger>
+                    <DataTrigger Binding="{Binding Viability}" Value="Medium"><Setter Property="Background" Value="#3366C0F4" /></DataTrigger>
+                    <DataTrigger Binding="{Binding Viability}" Value="Low"><Setter Property="Background" Value="#33E8B339" /></DataTrigger>
+                    <DataTrigger Binding="{Binding Viability}" Value="VeryLow"><Setter Property="Background" Value="#33E0523D" /></DataTrigger>
+                </Style.Triggers>
+            </Style>
+
             <DataTemplate x:Key="GameRow">
                 <Grid Height="48">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="44" />
                         <ColumnDefinition Width="*" MinWidth="160" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="110" />
                         <ColumnDefinition Width="280" />
                     </Grid.ColumnDefinitions>
                     <Border Width="32" Height="32" CornerRadius="2" Background="{StaticResource InputBrush}" HorizontalAlignment="Left">
                         <Image Source="{Binding IconUrl, TargetNullValue={x:Null}}" Width="32" Height="32" RenderOptions.BitmapScalingMode="HighQuality" />
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                        <TextBlock Text="{Binding Name}" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE735;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="{StaticResource WarningBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,6,0" ToolTip="Favorito"
+                                       Visibility="{Binding IsFavorite, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock Text="{Binding Name}" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
                         <TextBlock Text="{Binding PlaytimeText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
                     </StackPanel>
-                    <Border Grid.Column="2" Style="{StaticResource Badge}" Margin="0,0,16,0" ToolTip="{Binding BadgeTooltip}">
+                    <Border Grid.Column="2" Style="{StaticResource Badge}" Margin="0,0,12,0" ToolTip="{Binding BadgeTooltip}">
                         <Border.Visibility>
                             <Binding Path="Badge">
                                 <Binding.Converter>
@@ -38,7 +95,10 @@
                         </Border.Visibility>
                         <TextBlock Text="{Binding Badge}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource WarningBrush}" />
                     </Border>
-                    <StackPanel Grid.Column="3" VerticalAlignment="Center">
+                    <Border Grid.Column="3" Style="{StaticResource ViabilityChip}" ToolTip="{Binding ViabilityTooltip}">
+                        <TextBlock Text="{Binding ViabilityLabel}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                    </Border>
+                    <StackPanel Grid.Column="4" VerticalAlignment="Center">
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Right" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
                                        Text="{Binding Percent, StringFormat={}{0:0}%}"

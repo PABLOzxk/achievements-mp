@@ -1,5 +1,7 @@
+using System.Globalization;
 using AchievementsMP.Core.Domain;
-using AchievementsMP.Data.Repositories;
+using AchievementsMP.Core.Library;
+using AchievementsMP.Core.Progress;
 
 namespace AchievementsMP.App.ViewModels;
 
@@ -15,10 +17,12 @@ public sealed record LibraryItem(
     bool IsComplete,
     string? Badge,
     string? BadgeTooltip,
-    int PlaytimeMinutes,
-    int Remaining)
+    Viability Viability,
+    string? ViabilityLabel,
+    string? ViabilityTooltip,
+    bool IsFavorite)
 {
-    public static LibraryItem From(LibraryGame g)
+    public static LibraryItem From(LibraryGame g, bool isFavorite = false)
     {
         var p = g.Progress;
         var progressText = p.Total switch
@@ -38,14 +42,32 @@ public sealed record LibraryItem(
             DataAvailability.PrivateProfile => ("Privado", "A Steam não liberou o progresso deste jogo. Confira se “Detalhes do jogo” está público."),
             DataAvailability.SyncFailed => ("Desatualizado", $"A última tentativa falhou e os dados anteriores foram mantidos. {g.LastError}"),
             DataAvailability.SchemaUnavailable => ("Indisponível", g.LastError ?? "A Steam não informou as conquistas deste jogo."),
-            _ when p.IsComplete => ("100%", null),
             _ => (null, null),
         };
 
+        var (vLabel, vTooltip) = Describe(g.Outlook);
+
         return new LibraryItem(
             g.AppId, g.Name, g.IconUrl, FormatPlaytime(g.PlaytimeMinutes), progressText,
-            p.Percent ?? 0, p.Total > 0, p.IsComplete, badge, tooltip, g.PlaytimeMinutes, p.KnownRemaining);
+            p.Percent ?? 0, p.Total > 0, p.IsComplete, badge, tooltip, g.Outlook.Viability, vLabel, vTooltip, isFavorite);
     }
+
+    public static (string? Label, string? Tooltip) Describe(CompletionOutlook o)
+    {
+        var rarest = o.RarestRemainingPercent is { } r ? FormatPercent(r) : null;
+        return o.Viability switch
+        {
+            Viability.Done => ("100%", "Jogo completo."),
+            Viability.High => ("Viável", $"Todas as que faltam são comuns: a mais rara foi obtida por {rarest} dos jogadores."),
+            Viability.Medium => ("Moderado", $"A mais rara que falta foi obtida por {rarest} dos jogadores."),
+            Viability.Low => ("Difícil", $"A mais rara que falta foi obtida por só {rarest} dos jogadores."),
+            Viability.VeryLow => ("Muito difícil", $"A mais rara que falta foi obtida por menos de 1% dos jogadores ({rarest})."),
+            _ => (null, null),
+        };
+    }
+
+    public static string FormatPercent(double value) =>
+        value < 1 ? value.ToString("0.0#", CultureInfo.CurrentCulture) + "%" : value.ToString("0.#", CultureInfo.CurrentCulture) + "%";
 
     private static string FormatPlaytime(int minutes) => minutes switch
     {

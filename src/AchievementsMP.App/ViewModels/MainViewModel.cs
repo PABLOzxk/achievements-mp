@@ -16,10 +16,18 @@ public sealed partial class MainViewModel : ObservableObject
         Status = status;
         sync.DataChanged += () =>
         {
-            if (CurrentPage is OverviewViewModel or LibraryViewModel)
+            if (CurrentPage is OverviewViewModel or LibraryViewModel or GameDetailsViewModel)
                 _ = LoadAsync(CurrentPage);
         };
         overview.NavigateToSettings = () => Navigate(settings);
+        overview.NavigateToGame = library.NavigateToGame = appId =>
+        {
+            details.Show(appId);
+            if (CurrentPage == details)
+                _ = LoadAsync(details);
+            else
+                Navigate(details);
+        };
         _currentPage = overview;
         overview.IsActive = true;
     }

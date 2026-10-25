@@ -3,16 +3,26 @@
 App Windows para acompanhar conquistas da Steam: biblioteca, progresso por jogo, metas e um planejador de 100%.
 Tudo fica num banco SQLite local; a Steam é consultada só para leitura.
 
-## Estado atual: Fase 2 (sincronização)
+## Estado atual: Fase 3 (organização)
 
 | Pronto | Ainda não |
 | --- | --- |
-| Solução .NET 10 (LTS) em camadas, SQLite com migrações e backup | Filtros, ordenação, listas e detalhes do jogo (Fase 3) |
-| Configurações persistidas; chave da API cifrada com DPAPI | Planejador, metas e guias (Fase 4) |
-| Sincronização real: biblioteca, conquistas, progresso e raridade global | Instalador (Fase 5) |
-| Sincronização incremental, ao abrir e periódica; botão Sincronizar/Cancelar | |
-| Biblioteca com busca e progresso por jogo; visão geral com dados reais | |
-| 82 testes xUnit, CI no Windows | |
+| Solução .NET 10 (LTS) em camadas, SQLite com migrações e backup | Planejador, metas e guias (Fase 4) |
+| Sincronização incremental com a Steam (biblioteca, conquistas, raridade) | Anotações por conquista na interface (Fase 4) |
+| Biblioteca: busca, filtros (situação, viabilidade, lista) e 6 ordenações | Instalador (Fase 5) |
+| Detalhes do jogo: conquistas com estado, data e raridade global | |
+| Listas personalizadas e favoritos (menu do botão direito) | |
+| Viabilidade de 100% pela raridade da conquista mais rara que falta | |
+| 107 testes xUnit, CI no Windows | |
+
+## Viabilidade (o que é e o que não é)
+
+A Steam não informa se uma conquista é difícil, rápida ou perdível. O app usa o único dado objetivo disponível: a
+**porcentagem global** de jogadores que desbloquearam cada conquista. A viabilidade de um jogo é a faixa da conquista
+**mais rara que ainda falta**: Viável (≥ 20%), Moderado (5–20%), Difícil (1–5%), Muito difícil (< 1%).
+
+Limite conhecido: a porcentagem é sobre todos os donos do jogo, inclusive quem nunca jogou. Conquistas do fim da
+campanha parecem raras só porque muita gente abandona antes. É um indicador para priorizar, não uma medida de dificuldade.
 
 ## Como a sincronização funciona
 

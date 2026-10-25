@@ -5,6 +5,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -13,30 +14,62 @@
             <TextBlock Text="{Binding Summary}" Style="{StaticResource PageSubtitle}" />
         </StackPanel>
 
-        <Grid Grid.Row="1" Margin="0,20,16,12" MaxWidth="420" HorizontalAlignment="Left">
-            <TextBox x:Name="SearchBox" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, Delay=150}" Width="420" />
-            <TextBlock Text="Pesquisar por nome…" IsHitTestVisible="False" Margin="10,0,0,0" VerticalAlignment="Center"
-                       Foreground="{StaticResource TextMutedBrush}" FontSize="14">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
-                        <Setter Property="Visibility" Value="Collapsed" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
-                                <Setter Property="Visibility" Value="Visible" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-            </TextBlock>
-        </Grid>
+        <!-- Busca, filtros e ordenação -->
+        <WrapPanel Grid.Row="1" Margin="0,20,16,0">
+            <Grid Width="260" Margin="0,0,10,10">
+                <TextBox x:Name="SearchBox" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, Delay=150}" />
+                <TextBlock Text="Pesquisar por nome…" IsHitTestVisible="False" Margin="10,0,0,0" VerticalAlignment="Center"
+                           Foreground="{StaticResource TextMutedBrush}" FontSize="14">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+            <ComboBox Width="170" Margin="0,0,10,10" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding Status}" DisplayMemberPath="Label" ToolTip="Situação" />
+            <ComboBox Width="190" Margin="0,0,10,10" ItemsSource="{Binding ViabilityOptions}" SelectedItem="{Binding MinViability}" DisplayMemberPath="Label"
+                      ToolTip="Viabilidade = raridade da conquista mais rara que falta" />
+            <ComboBox Width="220" Margin="0,0,10,10" ItemsSource="{Binding SortOptions}" SelectedItem="{Binding Sort}" DisplayMemberPath="Label" ToolTip="Ordenar por" />
+        </WrapPanel>
 
-        <Border Grid.Row="2" Style="{StaticResource Card}" VerticalAlignment="Top" Margin="0,8,16,0"
+        <!-- Listas -->
+        <WrapPanel Grid.Row="2" Margin="0,0,16,8" VerticalAlignment="Center">
+            <ComboBox Width="260" Margin="0,0,10,8" ItemsSource="{Binding ListFilterOptions}" SelectedItem="{Binding ListFilter}" DisplayMemberPath="Name" ToolTip="Lista" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,10,8"
+                        Visibility="{Binding IsCreatingList, Converter={StaticResource InverseBoolToVisibility}}">
+                <Button Content="Nova lista" Command="{Binding StartCreatingListCommand}" Padding="12,6" />
+                <Button Content="Excluir lista" Command="{Binding DeleteCurrentListCommand}" Padding="12,6" Margin="8,0,0,0"
+                        Visibility="{Binding IsListSelected, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,10,8"
+                        Visibility="{Binding IsCreatingList, Converter={StaticResource BoolToVisibility}}">
+                <TextBox Width="200" Text="{Binding NewListName, UpdateSourceTrigger=PropertyChanged}" ToolTip="Nome da nova lista">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Enter" Command="{Binding CreateListCommand}" />
+                        <KeyBinding Key="Escape" Command="{Binding CancelCreatingListCommand}" />
+                    </TextBox.InputBindings>
+                </TextBox>
+                <Button Content="Criar" Style="{StaticResource PrimaryButton}" Command="{Binding CreateListCommand}" Padding="12,6" Margin="8,0,0,0" />
+                <Button Content="Cancelar" Command="{Binding CancelCreatingListCommand}" Padding="12,6" Margin="8,0,0,0" />
+            </StackPanel>
+            <TextBlock Text="{Binding ResultText}" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="0,0,0,8" />
+        </WrapPanel>
+
+        <Border Grid.Row="3" Style="{StaticResource Card}" VerticalAlignment="Top" Margin="0,8,16,0"
                 Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}">
             <TextBlock Style="{StaticResource Body}"
                        Text="Nenhum jogo ainda. Clique em “Sincronizar agora”, no canto inferior esquerdo, para importar sua biblioteca da Steam." />
         </Border>
 
-        <ListBox Grid.Row="2" ItemsSource="{Binding Items}" ItemTemplate="{StaticResource GameRow}"
+        <ListBox Grid.Row="3" ItemsSource="{Binding Items}" ItemTemplate="{StaticResource GameRow}"
+                 ItemContainerStyle="{StaticResource GameListItem}"
+                 SelectedItem="{Binding SelectedItem}"
                  Background="Transparent" BorderThickness="0" Padding="0,0,8,0"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  ScrollViewer.CanContentScroll="True"
@@ -44,29 +77,22 @@
                  VirtualizingPanel.VirtualizationMode="Recycling"
                  VirtualizingPanel.ScrollUnit="Pixel"
                  Visibility="{Binding IsEmpty, Converter={StaticResource InverseBoolToVisibility}}">
-            <ListBox.ItemContainerStyle>
-                <Style TargetType="ListBoxItem">
-                    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="ListBoxItem">
-                                <Border x:Name="Bd" Background="{StaticResource CardBrush}" Margin="0,0,0,2" Padding="12,0" CornerRadius="2">
-                                    <ContentPresenter />
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="{StaticResource CardHoverBrush}" />
-                                    </Trigger>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="{StaticResource CardHoverBrush}" />
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                </Style>
-            </ListBox.ItemContainerStyle>
+            <ListBox.ContextMenu>
+                <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                    <MenuItem Header="Favoritar / desfavoritar" Command="{Binding ToggleFavoriteCommand}" />
+                    <MenuItem Header="Adicionar à lista" ItemsSource="{Binding UserLists}">
+                        <MenuItem.ItemContainerStyle>
+                            <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                <Setter Property="Header" Value="{Binding Name}" />
+                                <Setter Property="Command" Value="{Binding AddSelected}" />
+                            </Style>
+                        </MenuItem.ItemContainerStyle>
+                    </MenuItem>
+                    <MenuItem Header="Nova lista com este jogo…" Command="{Binding StartCreatingListWithGameCommand}" />
+                    <Separator />
+                    <MenuItem Header="Remover da lista atual" Command="{Binding RemoveFromCurrentListCommand}" />
+                </ContextMenu>
+            </ListBox.ContextMenu>
         </ListBox>
     </Grid>
 </UserControl>
