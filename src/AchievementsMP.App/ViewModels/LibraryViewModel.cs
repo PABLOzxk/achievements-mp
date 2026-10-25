@@ -19,6 +19,7 @@ public sealed partial class LibraryViewModel(SteamCatalogRepository catalog, Per
     public override string Glyph => "";
 
     internal Action<long>? NavigateToGame { get; set; }
+    internal Action<long>? NavigateToPlanner { get; set; }
 
     public IReadOnlyList<Option<LibraryStatus>> StatusOptions { get; } =
     [
@@ -68,6 +69,7 @@ public sealed partial class LibraryViewModel(SteamCatalogRepository catalog, Per
     [NotifyCanExecuteChangedFor(nameof(ToggleFavoriteCommand))]
     [NotifyCanExecuteChangedFor(nameof(RemoveFromCurrentListCommand))]
     [NotifyCanExecuteChangedFor(nameof(StartCreatingListWithGameCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PlanSelectedCommand))]
     private LibraryItem? _selectedItem;
 
     [ObservableProperty] private bool _isCreatingList;
@@ -145,6 +147,12 @@ public sealed partial class LibraryViewModel(SteamCatalogRepository catalog, Per
     }
 
     private bool HasSelection() => SelectedItem is not null;
+
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private void PlanSelected()
+    {
+        if (SelectedItem is { } item) NavigateToPlanner?.Invoke(item.AppId);
+    }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
     private async Task ToggleFavoriteAsync()

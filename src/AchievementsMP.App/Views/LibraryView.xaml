@@ -79,6 +79,8 @@
                  Visibility="{Binding IsEmpty, Converter={StaticResource InverseBoolToVisibility}}">
             <ListBox.ContextMenu>
                 <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                    <MenuItem Header="Planejar 100%" Command="{Binding PlanSelectedCommand}" />
+                    <Separator />
                     <MenuItem Header="Favoritar / desfavoritar" Command="{Binding ToggleFavoriteCommand}" />
                     <MenuItem Header="Adicionar à lista" ItemsSource="{Binding UserLists}">
                         <MenuItem.ItemContainerStyle>

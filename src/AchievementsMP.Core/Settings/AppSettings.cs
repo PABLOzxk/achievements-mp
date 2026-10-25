@@ -1,3 +1,5 @@
+using AchievementsMP.Core.Planning;
+
 namespace AchievementsMP.Core.Settings;
 
 /// <summary>Preferências do usuário. A chave da API não fica aqui: ela é guardada criptografada via <see cref="ISecretStore"/>.</summary>
@@ -16,6 +18,9 @@ public sealed record AppSettings
 
     /// <summary>Intervalo mínimo entre sincronizações automáticas da biblioteca.</summary>
     public int SyncIntervalMinutes { get; init; } = 360;
+
+    /// <summary>Ordem do planejador de 100%.</summary>
+    public PlanStrategy PlanStrategy { get; init; } = PlanStrategy.Recommended;
 
     public static readonly AppSettings Default = new();
 }

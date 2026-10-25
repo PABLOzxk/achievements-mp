@@ -7,6 +7,7 @@ using AchievementsMP.App.ViewModels;
 using AchievementsMP.Core.Settings;
 using AchievementsMP.Data;
 using AchievementsMP.Data.Migrations;
+using AchievementsMP.Data.Planning;
 using AchievementsMP.Data.Repositories;
 using AchievementsMP.Steam;
 using AchievementsMP.Steam.Http;
@@ -53,7 +54,7 @@ public partial class App : Application
         }
     }
 
-    private static ServiceProvider ConfigureServices(AppPaths paths, SqliteConnectionFactory factory, int schemaVersion)
+    internal static ServiceProvider ConfigureServices(AppPaths paths, SqliteConnectionFactory factory, int schemaVersion)
     {
         var services = new ServiceCollection();
         services.AddSingleton(paths);
@@ -64,6 +65,8 @@ public partial class App : Application
         services.AddSingleton<ISecretStore>(sp => sp.GetRequiredService<SettingsRepository>());
         services.AddSingleton<SteamCatalogRepository>();
         services.AddSingleton<PersonalDataRepository>();
+        services.AddSingleton<PlannerRepository>();
+        services.AddSingleton<GoalTracker>();
         services.AddSingleton<SyncRunRepository>();
 
         services.AddSingleton<ISteamWebApi>(sp =>
@@ -87,6 +90,7 @@ public partial class App : Application
         services.AddSingleton<OverviewViewModel>();
         services.AddSingleton<LibraryViewModel>();
         services.AddSingleton<GameDetailsViewModel>();
+        services.AddSingleton<GoalsViewModel>();
         services.AddSingleton<PlannerViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<MainViewModel>();

@@ -5,7 +5,7 @@ public static class Schema
     /// <summary>
     /// Regras do desenho:
     /// - Tabelas da Steam (games, achievements, player_achievements, achievement_global_stats) são reescritas pela sincronização.
-    /// - Tabelas pessoais (user_lists, goals, plan_tasks, achievement_notes, guides) não têm chave estrangeira com cascata
+    /// - Tabelas pessoais (user_lists, goals, plan_tasks, achievement_notes, achievement_plans, guides) não têm chave estrangeira com cascata
     ///   para as tabelas da Steam, então nada que a sincronização faça pode apagá-las.
     /// - Jogos e conquistas nunca são apagados pela sincronização; são marcados (is_owned = 0, is_removed = 1).
     /// </summary>
@@ -136,6 +136,36 @@ public static class Schema
             ALTER TABLE games ADD COLUMN schema_language TEXT;
             -- Última falha por jogo, para mostrar o motivo na interface.
             ALTER TABLE games ADD COLUMN last_error TEXT;
+            """),
+
+        new(3, "planner", """
+            -- Classificação pessoal de cada conquista para o planejador. A Steam não fornece nada disso.
+            -- effort: 0 não sei, 1 rápida, 2 demorada · missable: 0 não sei, 1 perdível, 2 não perdível · priority: 0 baixa, 1 normal, 2 alta
+            CREATE TABLE achievement_plans (
+                app_id      INTEGER NOT NULL,
+                api_name    TEXT    NOT NULL,
+                effort      INTEGER NOT NULL DEFAULT 0,
+                missable    INTEGER NOT NULL DEFAULT 0,
+                priority    INTEGER NOT NULL DEFAULT 1,
+                requirement TEXT,
+                source      TEXT,
+                updated_utc INTEGER NOT NULL,
+                PRIMARY KEY (app_id, api_name)
+            ) WITHOUT ROWID;
+
+            ALTER TABLE guides ADD COLUMN title TEXT;
+
+            -- kind: 0 livre, 1 100% no jogo, 2 conquista específica, 3 quantidade · period: 0 nenhum, 1 diário, 2 semanal
+            ALTER TABLE goals ADD COLUMN kind INTEGER NOT NULL DEFAULT 0;
+            ALTER TABLE goals ADD COLUMN api_name TEXT;
+            ALTER TABLE goals ADD COLUMN target INTEGER;
+            ALTER TABLE goals ADD COLUMN period INTEGER NOT NULL DEFAULT 0;
+            ALTER TABLE goals ADD COLUMN done_utc INTEGER;
+
+            ALTER TABLE plan_tasks ADD COLUMN created_utc INTEGER;
+
+            -- Contagem de desbloqueios por período (metas semanais/diárias).
+            CREATE INDEX ix_player_achievements_unlocked ON player_achievements(unlocked_utc) WHERE state = 2;
             """),
     ];
 

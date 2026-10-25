@@ -1,4 +1,5 @@
 using AchievementsMP.Core.Domain;
+using AchievementsMP.Core.Planning;
 using AchievementsMP.Data.Repositories;
 
 namespace AchievementsMP.Tests.Data;
@@ -40,21 +41,28 @@ public class SyncSafetyTests
         await using var db = await TempDatabase.CreateMigratedAsync();
         var steam = new SteamCatalogRepository(db.Factory);
         var personal = new PersonalDataRepository(db.Factory);
+        var planner = new PlannerRepository(db.Factory);
 
         await steam.UpsertLibraryAsync([G(Portal, "Portal 2"), G(Tf2, "TF2")], T0, isCompleteLibrary: true);
         await steam.UpsertSchemaAsync(Portal, [A(Portal, "X"), A(Portal, "Y")], T0);
         var list = await personal.CreateListAsync("Para platinar", null, T0);
         await personal.AddGameToListAsync(list, Portal, T0);
-        await personal.SetAchievementNoteAsync(Portal, "Y", "Fazer no capítulo 8", T0);
-        await personal.AddPlanTaskAsync(Portal, "Y", "Pegar Y");
+        await planner.SetAchievementNoteAsync(Portal, "Y", "Fazer no capítulo 8", T0);
+        await planner.AddTaskAsync(Portal, "Y", "Pegar Y", T0);
+        await planner.SavePlanAsync(new AchievementPlan(Portal, "Y", Effort.Long, Missable.Yes, Note: "Fazer no capítulo 8"), T0);
+        await planner.AddGuideAsync(Portal, "Y", new Uri("https://example.com/guia"), "Guia", T0);
+        await planner.CreateGoalAsync(new GoalDraft("100% em Portal 2", GoalKind.CompleteGame, Portal), T0);
 
         // Portal some da biblioteca (reembolso, família) e a conquista Y some do esquema.
         await steam.UpsertLibraryAsync([G(Tf2, "TF2")], T0.AddHours(1), isCompleteLibrary: true);
         await steam.UpsertSchemaAsync(Portal, [A(Portal, "X")], T0.AddHours(1));
 
         Assert.Equal([Portal], await personal.GetListGamesAsync(list));
-        Assert.Equal("Fazer no capítulo 8", await personal.GetAchievementNoteAsync(Portal, "Y"));
-        Assert.Equal(1, await personal.CountPlanTasksAsync(Portal));
+        Assert.Equal("Fazer no capítulo 8", await planner.GetAchievementNoteAsync(Portal, "Y"));
+        Assert.Equal(1, await planner.CountTasksAsync(Portal));
+        Assert.Equal(Missable.Yes, (await planner.GetPlansAsync(Portal))["Y"].Missable);
+        Assert.Single(await planner.GetGuidesAsync(Portal));
+        Assert.Single(await planner.GetGoalsAsync());
 
         var all = await steam.GetLibraryAsync(includeNotOwned: true);
         Assert.False(all.Single(g => g.AppId == Portal).IsOwned);

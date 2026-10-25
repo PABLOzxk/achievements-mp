@@ -92,7 +92,8 @@ public sealed partial class SettingsViewModel(ISettingsStore store, ISecretStore
             _ => null,
         };
 
-        await store.SaveAsync(new AppSettings
+        // "with": preserva o que esta tela não edita (ex.: ordem do planejador).
+        await store.SaveAsync(previous with
         {
             SteamProfile = string.IsNullOrWhiteSpace(SteamProfile) ? null : SteamProfile.Trim(),
             SteamId64 = steamId,

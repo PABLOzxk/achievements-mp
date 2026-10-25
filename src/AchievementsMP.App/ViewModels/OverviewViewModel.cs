@@ -1,18 +1,24 @@
 using AchievementsMP.Core.Library;
+using AchievementsMP.Core.Planning;
 using AchievementsMP.Core.Progress;
+using AchievementsMP.Data.Planning;
 using AchievementsMP.Data.Repositories;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace AchievementsMP.App.ViewModels;
 
-public sealed partial class OverviewViewModel(SteamCatalogRepository catalog, AchievementsMP.Core.Settings.ISecretStore secrets) : PageViewModel, IGameOpener
+public sealed partial class OverviewViewModel(
+    SteamCatalogRepository catalog, PlannerRepository planner, GoalTracker goals, AchievementsMP.Core.Settings.ISecretStore secrets, TimeProvider time)
+    : PageViewModel, IGameOpener
 {
     public override string Title => "Visão geral";
     public override string Glyph => "\uE80F";
 
     internal Action? NavigateToSettings { get; set; }
     internal Action<long>? NavigateToGame { get; set; }
+    internal Action<long, string?>? NavigateToPlanner { get; set; }
+    internal Action? NavigateToGoals { get; set; }
 
     public void OpenGame(long appId) => NavigateToGame?.Invoke(appId);
 
@@ -25,6 +31,11 @@ public sealed partial class OverviewViewModel(SteamCatalogRepository catalog, Ac
     [ObservableProperty] private IReadOnlyList<LibraryItem> _closest = [];
     [ObservableProperty] private IReadOnlyList<LibraryItem> _mostViable = [];
     [ObservableProperty] private bool _hasViable;
+    [ObservableProperty] private IReadOnlyList<GoalItem> _activeGoals = [];
+    [ObservableProperty] private bool _hasGoals;
+    [ObservableProperty] private string _goalsHeader = "METAS EM ANDAMENTO";
+    [ObservableProperty] private IReadOnlyList<FlaggedItem> _flagged = [];
+    [ObservableProperty] private bool _hasFlagged;
 
     public override async Task OnNavigatedToAsync()
     {
@@ -57,8 +68,38 @@ public sealed partial class OverviewViewModel(SteamCatalogRepository catalog, Ac
             .Select(g => LibraryItem.From(g))
             .ToList();
         HasViable = MostViable.Count > 0;
+
+        var now = time.GetUtcNow();
+        var zone = TimeZoneInfo.Local;
+        var active = GoalItem.OrderActive(await goals.GetGoalsAsync(now, zone)).ToList();
+        ActiveGoals = active.Take(5).Select(v => GoalItem.From(v, now, zone)).ToList();
+        HasGoals = ActiveGoals.Count > 0;
+        GoalsHeader = active.Count > ActiveGoals.Count ? $"METAS EM ANDAMENTO · {ActiveGoals.Count} DE {active.Count}" : "METAS EM ANDAMENTO";
+
+        Flagged = (await planner.GetFlaggedPendingAsync(8)).Select(FlaggedItem.From).ToList();
+        HasFlagged = Flagged.Count > 0;
+    }
+
+    [RelayCommand]
+    private void OpenGoals() => NavigateToGoals?.Invoke();
+
+    [RelayCommand]
+    private void OpenFlagged(FlaggedItem? item)
+    {
+        if (item is not null) NavigateToPlanner?.Invoke(item.AppId, item.ApiName);
     }
 
     [RelayCommand]
     private void OpenSettings() => NavigateToSettings?.Invoke();
+}
+
+/// <summary>Conquista perdível ou prioritária, para a visão geral.</summary>
+public sealed record FlaggedItem(long AppId, string ApiName, string Name, string GameName, string? IconUrl, bool IsMissable, string RarityText, Rarity Rarity)
+{
+    public static FlaggedItem From(FlaggedAchievement f)
+    {
+        var (rarity, text) = AchievementItem.DescribeRarity(f.Achievement.GlobalPercent);
+        return new FlaggedItem(f.AppId, f.Achievement.ApiName, f.Achievement.DisplayName, f.GameName,
+            f.Achievement.IconGrayUrl ?? f.Achievement.IconUrl, f.Plan.Missable == Missable.Yes, text, rarity);
+    }
 }

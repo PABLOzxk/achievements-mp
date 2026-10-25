@@ -78,7 +78,10 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
+            <Button Grid.Column="2" Content="Planejar 100%" Style="{StaticResource PrimaryButton}" Padding="14,7" VerticalAlignment="Top" Margin="16,6,0,0"
+                    Command="{Binding OpenPlannerCommand}" />
             <Border Width="64" Height="64" CornerRadius="3" Background="{StaticResource InputBrush}" VerticalAlignment="Top" Margin="0,4,20,0">
                 <Image Source="{Binding Game.IconUrl, TargetNullValue={x:Null}}" Width="64" Height="64" RenderOptions.BitmapScalingMode="HighQuality" />
             </Border>
@@ -90,8 +93,16 @@
                         <TextBlock Text="{Binding ViabilityLabel}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
                     </Border>
                 </StackPanel>
-                <ProgressBar Margin="0,12,0,0" Maximum="100" Value="{Binding Game.Percent, Mode=OneWay}" MaxWidth="520" HorizontalAlignment="Stretch"
-                             Visibility="{Binding Game.ShowBar, Converter={StaticResource BoolToVisibility}}" />
+                <!-- Coluna com MaxWidth em vez de MaxWidth na barra: com Stretch, a barra limitada ficava centralizada. -->
+                <Grid Margin="0,12,0,0" Visibility="{Binding Game.ShowBar, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MaxWidth="520" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ProgressBar Maximum="100" Value="{Binding Game.Percent, Mode=OneWay}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Game.Percent, StringFormat={}{0:0}%}" FontSize="12" Margin="10,0,0,0"
+                               Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                </Grid>
                 <TextBlock Text="{Binding Headline}" Style="{StaticResource Body}" Margin="0,8,0,0" />
                 <TextBlock Text="{Binding Caveat}" Style="{StaticResource Hint}" Margin="0,4,0,0" />
             </StackPanel>

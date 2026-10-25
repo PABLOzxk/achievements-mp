@@ -48,6 +48,124 @@
                 </Border>
             </UniformGrid>
     
+            <!-- Metas e pendentes prioritárias (planejador) -->
+            <Grid Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="Ver metas" FontSize="12" VerticalAlignment="Top"
+                                    Command="{Binding OpenGoalsCommand}" />
+                            <TextBlock Text="{Binding GoalsHeader}" Style="{StaticResource SectionTitle}" />
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding ActiveGoals}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource RowButton}"
+                                            Command="{Binding DataContext.OpenGoalsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Title}" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                                            <Grid Margin="0,6,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <ProgressBar Maximum="100" Value="{Binding Percent, Mode=OneWay}" VerticalAlignment="Center"
+                                                             Visibility="{Binding ShowBar, Converter={StaticResource BoolToVisibility}}" />
+                                                <TextBlock Grid.Column="1" Text="{Binding ProgressText}" FontSize="12" Margin="10,0,0,0" MaxWidth="240"
+                                                           TextTrimming="CharacterEllipsis" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                                            </Grid>
+                                            <TextBlock Text="{Binding DeadlineText}" FontSize="12" Margin="0,4,0,0">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding DeadlineText}" Value="{x:Null}">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Deadline}" Value="DueSoon">
+                                                                <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Deadline}" Value="Overdue">
+                                                                <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Style="{StaticResource Body}" Foreground="{StaticResource TextMutedBrush}"
+                                   Visibility="{Binding HasGoals, Converter={StaticResource InverseBoolToVisibility}}"
+                                   Text="Nenhuma meta ativa. Crie uma no Planejador de 100%, aba Metas." />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="PENDENTES PRIORITÁRIAS" Style="{StaticResource SectionTitle}" />
+                        <ItemsControl ItemsSource="{Binding Flagged}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource RowButton}"
+                                            Command="{Binding DataContext.OpenFlaggedCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="40" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Width="32" Height="32" CornerRadius="2" Background="{StaticResource InputBrush}" HorizontalAlignment="Left">
+                                                <Image Source="{Binding IconUrl, TargetNullValue={x:Null}}" Width="32" Height="32" RenderOptions.BitmapScalingMode="HighQuality" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                                <TextBlock Text="{Binding Name}" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding GameName}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                            <Border Grid.Column="2" VerticalAlignment="Center">
+                                                <Border.Style>
+                                                    <Style TargetType="Border" BasedOn="{StaticResource WarningChip}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsMissable}" Value="True">
+                                                                <Setter Property="Background" Value="#55E0523D" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock>
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource ChipText}">
+                                                            <Setter Property="Text" Value="Alta prioridade" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsMissable}" Value="True">
+                                                                    <Setter Property="Text" Value="Perdível" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Border>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Style="{StaticResource Body}" Foreground="{StaticResource TextMutedBrush}"
+                                   Visibility="{Binding HasFlagged, Converter={StaticResource InverseBoolToVisibility}}"
+                                   Text="Conquistas que você marcar no planejador como perdíveis ou de alta prioridade aparecem aqui." />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <StackPanel>
                     <TextBlock Text="MENOS CONQUISTAS FALTANDO" Style="{StaticResource SectionTitle}" />
@@ -63,7 +181,7 @@
                 <StackPanel>
                     <TextBlock Text="MAIS VIÁVEIS DE COMPLETAR" Style="{StaticResource SectionTitle}" />
                     <TextBlock Style="{StaticResource Hint}" Margin="0,-4,0,10"
-                               Text="Jogos começados em que a conquista mais rara que falta é a mais comum. Viabilidade = raridade global, não dificuldade real." />
+                               Text="Ordem pela raridade da conquista mais rara que falta: mostra o quão exclusiva é a parte mais difícil, não quanto tempo falta. Compare com quantas faltam." />
                     <ListBox ItemsSource="{Binding MostViable}" ItemTemplate="{StaticResource GameRow}" ItemContainerStyle="{StaticResource GameListItem}"
                              Style="{StaticResource PlainList}"
                              Visibility="{Binding HasViable, Converter={StaticResource BoolToVisibility}}" />
@@ -73,13 +191,6 @@
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
-                <StackPanel>
-                    <TextBlock Text="METAS EM ANDAMENTO" Style="{StaticResource SectionTitle}" />
-                    <TextBlock Style="{StaticResource Body}" Foreground="{StaticResource TextMutedBrush}"
-                               Text="Metas e conquistas prioritárias chegam com o planejador (Fase 4)." />
-                </StackPanel>
-            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

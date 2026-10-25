@@ -253,7 +253,8 @@ public sealed class SyncServiceTests : IAsyncLifetime
         await CreateService().SyncAsync();
         var list = await _personal.CreateListAsync("Minha lista", null, _clock.GetUtcNow());
         await _personal.AddGameToListAsync(list, Portal, _clock.GetUtcNow());
-        await _personal.SetAchievementNoteAsync(Portal, "B", "nota", _clock.GetUtcNow());
+        var planner = new PlannerRepository(_db.Factory);
+        await planner.SavePlanAsync(new AchievementsMP.Core.Planning.AchievementPlan(Portal, "B", Missable: AchievementsMP.Core.Planning.Missable.Yes, Note: "nota"), _clock.GetUtcNow());
 
         const ulong other = 76561197960287930;
         _steam.Library = [_steam.Library[0] with { PlaytimeMinutes = 5 }];
@@ -267,7 +268,8 @@ public sealed class SyncServiceTests : IAsyncLifetime
         Assert.Equal(new(2, 0, 2, 0), owned[0].Progress);
         Assert.Equal(0, (await Game(Celeste)).Progress.Unlocked); // progresso da conta anterior foi descartado
         Assert.Equal([Portal], await _personal.GetListGamesAsync(list));
-        Assert.Equal("nota", await _personal.GetAchievementNoteAsync(Portal, "B"));
+        Assert.Equal("nota", await planner.GetAchievementNoteAsync(Portal, "B"));
+        Assert.Equal(AchievementsMP.Core.Planning.Missable.Yes, (await planner.GetPlansAsync(Portal))["B"].Missable);
     }
 
     [Fact]

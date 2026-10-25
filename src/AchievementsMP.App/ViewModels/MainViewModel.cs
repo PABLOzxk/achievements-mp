@@ -20,17 +20,32 @@ public sealed partial class MainViewModel : ObservableObject
                 _ = LoadAsync(CurrentPage);
         };
         overview.NavigateToSettings = () => Navigate(settings);
-        overview.NavigateToGame = library.NavigateToGame = appId =>
+        overview.NavigateToGame = library.NavigateToGame = planner.NavigateToGame = appId =>
         {
             details.Show(appId);
-            if (CurrentPage == details)
-                _ = LoadAsync(details);
-            else
-                Navigate(details);
+            Show(details);
         };
+        overview.NavigateToPlanner = (appId, apiName) =>
+        {
+            planner.ShowGame(appId, apiName);
+            Show(planner);
+        };
+        library.NavigateToPlanner = details.NavigateToPlanner = appId =>
+        {
+            planner.ShowGame(appId);
+            Show(planner);
+        };
+        overview.NavigateToGoals = () =>
+        {
+            planner.ShowGoals();
+            Show(planner);
+        };
+        _planner = planner;
         _currentPage = overview;
         overview.IsActive = true;
     }
+
+    private readonly PlannerViewModel _planner;
 
     public ObservableCollection<PageViewModel> Pages { get; }
     public SettingsViewModel Settings { get; }
@@ -49,6 +64,20 @@ public sealed partial class MainViewModel : ObservableObject
 
     [RelayCommand]
     private void Navigate(PageViewModel page) => CurrentPage = page;
+
+    /// <summary>Vai para a página, ou recarrega se ela já estiver aberta.</summary>
+    private void Show(PageViewModel page)
+    {
+        if (CurrentPage == page)
+            _ = LoadAsync(page);
+        else
+            Navigate(page);
+    }
+
+    /// <summary>Edições ainda não gravadas (o planejador grava ao trocar de conquista ou sair da tela).</summary>
+    public bool HasPendingEdits => _planner.HasPendingEdits;
+
+    public Task FlushAsync() => _planner.FlushAsync();
 
     public async Task InitializeAsync()
     {

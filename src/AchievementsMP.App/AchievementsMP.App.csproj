@@ -6,7 +6,7 @@
     <AssemblyName>AchievementsMP</AssemblyName>
     <RootNamespace>AchievementsMP.App</RootNamespace>
     <Product>Achievements MP</Product>
-    <Version>0.1.0</Version>
+    <Version>0.4.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
@@ -14,6 +14,9 @@
     <ProjectReference Include="..\AchievementsMP.Data\AchievementsMP.Data.csproj" />
     <ProjectReference Include="..\AchievementsMP.Steam\AchievementsMP.Steam.csproj" />
     <ProjectReference Include="..\AchievementsMP.Sync\AchievementsMP.Sync.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="AchievementsMP.UiTests" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />

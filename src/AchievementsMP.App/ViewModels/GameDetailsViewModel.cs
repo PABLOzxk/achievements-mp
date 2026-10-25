@@ -4,6 +4,7 @@ using AchievementsMP.Core.Library;
 using AchievementsMP.Core.Progress;
 using AchievementsMP.Data.Repositories;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace AchievementsMP.App.ViewModels;
 
@@ -38,18 +39,21 @@ public sealed record AchievementItem(
             UnlockState.Locked => "Pendente",
             _ => "Sem dados",
         };
-        var rarity = a.GlobalPercent switch
+        var (rarity, rarityText) = DescribeRarity(a.GlobalPercent);
+        return new AchievementItem(a.DisplayName, description, unlocked ? a.IconUrl : a.IconGrayUrl ?? a.IconUrl,
+            unlocked, a.State == UnlockState.Unknown, state, a.GlobalPercent, rarityText, rarity, a.UnlockedAtUtc);
+    }
+
+    public static (Rarity Rarity, string Text) DescribeRarity(double? percent) => (
+        percent switch
         {
             null => Rarity.Unknown,
             >= CompletionOutlook.HighThreshold => Rarity.Common,
             >= CompletionOutlook.MediumThreshold => Rarity.Uncommon,
             >= CompletionOutlook.LowThreshold => Rarity.Rare,
             _ => Rarity.UltraRare,
-        };
-        var rarityText = a.GlobalPercent is { } p ? $"{LibraryItem.FormatPercent(p)} dos jogadores" : "Raridade desconhecida";
-        return new AchievementItem(a.DisplayName, description, unlocked ? a.IconUrl : a.IconGrayUrl ?? a.IconUrl,
-            unlocked, a.State == UnlockState.Unknown, state, a.GlobalPercent, rarityText, rarity, a.UnlockedAtUtc);
-    }
+        },
+        percent is { } p ? $"{LibraryItem.FormatPercent(p)} dos jogadores" : "Raridade desconhecida");
 }
 
 public sealed partial class GameDetailsViewModel(SteamCatalogRepository catalog) : PageViewModel
@@ -59,6 +63,14 @@ public sealed partial class GameDetailsViewModel(SteamCatalogRepository catalog)
 
     private long? _appId;
     private IReadOnlyList<AchievementItem> _all = [];
+
+    internal Action<long>? NavigateToPlanner { get; set; }
+
+    [RelayCommand]
+    private void OpenPlanner()
+    {
+        if (_appId is { } appId) NavigateToPlanner?.Invoke(appId);
+    }
 
     public IReadOnlyList<Option<AchievementFilter>> FilterOptions { get; } =
     [

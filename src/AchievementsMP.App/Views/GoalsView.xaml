@@ -1,0 +1,155 @@
+<UserControl x:Class="AchievementsMP.App.Views.GoalsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:AchievementsMP.App.Converters">
+    <UserControl.Resources>
+        <conv:NotNullToVisibilityConverter x:Key="NotNullToVisibility" />
+
+        <DataTemplate x:Key="GoalCard">
+            <Border Style="{StaticResource Card}" Margin="0,0,0,8" Padding="16,14">
+                <StackPanel>
+                    <DockPanel>
+                        <!-- Ações -->
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                            <Button Content="Concluir" Padding="10,4" Margin="6,0,0,0" FontSize="12" Style="{StaticResource PrimaryButton}"
+                                    Visibility="{Binding CanComplete, Converter={StaticResource BoolToVisibility}}"
+                                    Command="{Binding DataContext.CompleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                            <Button Content="Ver plano" Padding="10,4" Margin="6,0,0,0" FontSize="12"
+                                    Visibility="{Binding HasGame, Converter={StaticResource BoolToVisibility}}"
+                                    Command="{Binding DataContext.OpenGoalGameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                            <Button Content="Abandonar" Padding="10,4" Margin="6,0,0,0" FontSize="12"
+                                    Visibility="{Binding CanAbandon, Converter={StaticResource BoolToVisibility}}"
+                                    Command="{Binding DataContext.AbandonCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                            <Button Content="Reabrir" Padding="10,4" Margin="6,0,0,0" FontSize="12"
+                                    Visibility="{Binding CanReopen, Converter={StaticResource BoolToVisibility}}"
+                                    Command="{Binding DataContext.ReopenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                            <Button Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Excluir meta" Margin="6,0,0,0"
+                                    Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,0,12,0">
+                            <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Subtitle}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </DockPanel>
+
+                    <Grid Margin="0,10,0,0" Visibility="{Binding ShowBar, Converter={StaticResource BoolToVisibility}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MaxWidth="420" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ProgressBar Maximum="100" Value="{Binding Percent, Mode=OneWay}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{Binding Percent, StringFormat={}{0:0}%}" FontSize="12" Margin="10,0,0,0"
+                                   Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <WrapPanel Margin="0,8,0,0">
+                        <TextBlock Text="{Binding ProgressText}" FontSize="12" VerticalAlignment="Center" Margin="0,0,12,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsMet}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Text="{Binding DeadlineText}" FontSize="12" VerticalAlignment="Center" Margin="0,0,12,0"
+                                   Visibility="{Binding DeadlineText, Converter={StaticResource NotNullToVisibility}}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Deadline}" Value="DueSoon">
+                                            <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Deadline}" Value="Overdue">
+                                            <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <Border Style="{StaticResource WarningChip}" Visibility="{Binding PriorityLabel, Converter={StaticResource NotNullToVisibility}}">
+                            <TextBlock Text="{Binding PriorityLabel}" Style="{StaticResource ChipText}" />
+                        </Border>
+                        <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"
+                                   Visibility="{Binding StatusText, Converter={StaticResource NotNullToVisibility}}" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MinWidth="280" />
+            <ColumnDefinition Width="16" />
+            <ColumnDefinition Width="340" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Lista de metas -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0">
+            <StackPanel Margin="0,0,0,24">
+                <TextBlock Text="EM ANDAMENTO" Style="{StaticResource SectionTitle}" />
+                <Border Style="{StaticResource Card}" Visibility="{Binding HasActive, Converter={StaticResource InverseBoolToVisibility}}">
+                    <TextBlock Style="{StaticResource Body}"
+                               Text="Nenhuma meta ativa. Crie uma ao lado: 100% num jogo até uma data, uma conquista específica ou um ritmo, como 3 conquistas por semana." />
+                </Border>
+                <ItemsControl ItemsSource="{Binding Active}" ItemTemplate="{StaticResource GoalCard}" />
+
+                <Button Style="{StaticResource LinkButton}" HorizontalAlignment="Left" Margin="0,12,0,8" Content="{Binding FinishedHeader}"
+                        Command="{Binding ToggleFinishedCommand}" Visibility="{Binding HasFinished, Converter={StaticResource BoolToVisibility}}" />
+                <ItemsControl ItemsSource="{Binding Finished}" ItemTemplate="{StaticResource GoalCard}" Opacity="0.75"
+                              Visibility="{Binding ShowFinished, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Nova meta -->
+        <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0">
+            <Border Style="{StaticResource Card}" VerticalAlignment="Top" Margin="0,0,0,24">
+                <StackPanel>
+                    <TextBlock Text="NOVA META" Style="{StaticResource SectionTitle}" />
+
+                    <TextBlock Text="Tipo" Style="{StaticResource FieldLabel}" Margin="0,0,0,4" />
+                    <ComboBox ItemsSource="{Binding KindOptions}" SelectedItem="{Binding Kind}" DisplayMemberPath="Label" />
+
+                    <StackPanel Visibility="{Binding ShowGame, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="Jogo" Style="{StaticResource FieldLabel}" />
+                        <ComboBox ItemsSource="{Binding GameOptions}" SelectedItem="{Binding Game}" DisplayMemberPath="Label" />
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding ShowAchievement, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="Conquista (só as que faltam)" Style="{StaticResource FieldLabel}" />
+                        <ComboBox ItemsSource="{Binding AchievementOptions}" SelectedItem="{Binding Achievement}" DisplayMemberPath="Label" />
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding ShowCount, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="Quantidade de conquistas" Style="{StaticResource FieldLabel}" />
+                        <TextBox Text="{Binding TargetText, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalAlignment="Left" />
+                        <TextBlock Text="Ritmo" Style="{StaticResource FieldLabel}" />
+                        <ComboBox ItemsSource="{Binding PeriodOptions}" SelectedItem="{Binding Period}" DisplayMemberPath="Label" />
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding ShowDeadline, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="Prazo (opcional)" Style="{StaticResource FieldLabel}" />
+                        <TextBox Text="{Binding DeadlineText, UpdateSourceTrigger=PropertyChanged}" Tag="dd/mm/aaaa" Width="160" HorizontalAlignment="Left" />
+                    </StackPanel>
+
+                    <TextBlock Text="Prioridade" Style="{StaticResource FieldLabel}" />
+                    <ComboBox ItemsSource="{Binding PriorityOptions}" SelectedItem="{Binding Priority}" DisplayMemberPath="Label" />
+
+                    <TextBlock Text="Nome (opcional)" Style="{StaticResource FieldLabel}" />
+                    <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" Tag="{Binding SuggestedTitle}" />
+
+                    <TextBlock Text="{Binding FormError}" Style="{StaticResource Hint}" Foreground="{StaticResource WarningBrush}" Margin="0,10,0,0"
+                               Visibility="{Binding FormError, Converter={StaticResource NotNullToVisibility}}" />
+                    <Button Content="Criar meta" Style="{StaticResource PrimaryButton}" Command="{Binding CreateCommand}" HorizontalAlignment="Left" Margin="0,16,0,0" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,12,0,0"
+                               Text="O progresso vem da Steam (datas de desbloqueio) e atualiza a cada sincronização. Metas de 100% e de conquista se concluem sozinhas; metas livres você marca." />
+                </StackPanel>
+            </Border>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

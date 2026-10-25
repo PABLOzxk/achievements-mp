@@ -62,6 +62,29 @@ public class MigrationRunnerTests
     }
 
     [Fact]
+    public async Task Version_2_database_upgrades_to_planner_keeping_personal_rows()
+    {
+        await using var db = TempDatabase.CreateEmpty();
+        await new MigrationRunner(db.Factory, db.Paths.Backups, Schema.All.Take(2).ToList()).MigrateAsync();
+        await using (var c = await db.Factory.OpenAsync())
+        {
+            await c.ExecuteAsync("INSERT INTO goals(title, app_id, created_utc) VALUES ('Platinar Portal', 620, 0)");
+            await c.ExecuteAsync("INSERT INTO guides(app_id, url, created_utc) VALUES (620, 'https://example.com/portal', 0)");
+            await c.ExecuteAsync("INSERT INTO plan_tasks(app_id, title) VALUES (620, 'Achar o bolo')");
+        }
+
+        var result = await new MigrationRunner(db.Factory, db.Paths.Backups).MigrateAsync();
+
+        Assert.Equal(2, result.FromVersion);
+        Assert.NotNull(result.BackupPath);
+        var planner = new AchievementsMP.Data.Repositories.PlannerRepository(db.Factory);
+        var goal = Assert.Single(await planner.GetGoalsAsync());
+        Assert.Equal(("Platinar Portal", AchievementsMP.Core.Domain.GoalKind.Custom, AchievementsMP.Core.Domain.GoalPeriod.None), (goal.Title, goal.Kind, goal.Period));
+        Assert.Equal("https://example.com/portal", Assert.Single(await planner.GetGuidesAsync(620)).Url.AbsoluteUri);
+        Assert.Equal("Achar o bolo", Assert.Single(await planner.GetTasksAsync(620)).Title);
+    }
+
+    [Fact]
     public async Task Failed_migration_rolls_back_and_leaves_version_untouched()
     {
         await using var db = await TempDatabase.CreateMigratedAsync();

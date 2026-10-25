@@ -3,17 +3,36 @@
 App Windows para acompanhar conquistas da Steam: biblioteca, progresso por jogo, metas e um planejador de 100%.
 Tudo fica num banco SQLite local; a Steam é consultada só para leitura.
 
-## Estado atual: Fase 3 (organização)
+## Estado atual: Fase 4 (planejador e metas)
 
 | Pronto | Ainda não |
 | --- | --- |
-| Solução .NET 10 (LTS) em camadas, SQLite com migrações e backup | Planejador, metas e guias (Fase 4) |
-| Sincronização incremental com a Steam (biblioteca, conquistas, raridade) | Anotações por conquista na interface (Fase 4) |
-| Biblioteca: busca, filtros (situação, viabilidade, lista) e 6 ordenações | Instalador (Fase 5) |
+| Solução .NET 10 (LTS) em camadas, SQLite com migrações e backup | Instalador (Fase 5) |
+| Sincronização incremental com a Steam (biblioteca, conquistas, raridade) | |
+| Biblioteca: busca, filtros (situação, viabilidade, lista) e 6 ordenações | |
 | Detalhes do jogo: conquistas com estado, data e raridade global | |
 | Listas personalizadas e favoritos (menu do botão direito) | |
 | Viabilidade de 100% pela raridade da conquista mais rara que falta | |
-| 107 testes xUnit, CI no Windows | |
+| Planejador de 100%: classificação por conquista, anotações, guias, checklist | |
+| Metas com progresso automático (100%, conquista, N por dia/semana) | |
+| Testes xUnit + teste de fumaça das telas no Windows, CI no Windows | |
+
+## Planejador de 100%
+
+A Steam não diz se uma conquista é perdível, rápida ou demorada. No planejador, **você** classifica cada uma
+(e anota a fonte); o que não for marcado fica como "não sei", nunca como um palpite do programa.
+
+- **Ordem do plano** (configurável): perdíveis → rápidas → sem classificação → demoradas; ou rápidas primeiro; ou só
+  pela raridade. Dentro de cada grupo: prioridade alta primeiro, depois da mais comum para a mais rara.
+- **Por conquista:** perdível (sim / não / não sei), esforço, prioridade, requisito especial, fonte, anotação e links de guia.
+- **Por jogo:** checklist de tarefas próprias (com data de conclusão e ordem) e links de guias.
+- **Metas:** 100% num jogo, uma conquista, N conquistas (no total até um prazo, por dia ou por semana) ou meta livre.
+  O progresso vem das datas de desbloqueio da Steam. Sem dados da Steam a meta fica "sem dados", nunca "falhou".
+  Metas de 100% e de conquista se concluem sozinhas e continuam concluídas mesmo se um DLC trouxer conquistas novas.
+- **Links:** só `http`/`https` são aceitos e abertos, conferido ao salvar e de novo ao abrir.
+
+Ponto cego: o plano só é tão bom quanto a sua classificação. Sem ela, vira "mais comuns primeiro", que é raridade,
+não tempo. Tempo até 100% não vem da Steam, e o HowLongToBeat não tem API pública.
 
 ## Viabilidade (o que é e o que não é)
 
@@ -39,7 +58,7 @@ campanha parecem raras só porque muita gente abandona antes. É um indicador pa
 2. Na pasta do projeto:
 
 ```powershell
-dotnet test                                  # roda os testes
+dotnet test                                  # roda os testes (os de interface só no Windows)
 dotnet run --project src/AchievementsMP.App  # abre o app
 ```
 
@@ -57,6 +76,7 @@ src/
   AchievementsMP.App     WPF (MVVM com CommunityToolkit.Mvvm). Só esta camada depende do Windows.
 tests/
   AchievementsMP.Tests   xUnit. Banco real em arquivo temporário; Steam com respostas gravadas.
+  AchievementsMP.UiTests Só Windows: abre cada tela com dados e falha em erro de XAML ou de binding.
 ```
 
 ## Regras que o código garante (e os testes cobrem)
@@ -73,5 +93,5 @@ tests/
 
 - Cada usuário usa **a própria chave** da Steam Web API (gratuita, em <https://steamcommunity.com/dev/apikey>). Por isso não há servidor nem chave embutida no executável.
 - O perfil **e** a opção "Detalhes do jogo" precisam estar **públicos**, senão a Steam devolve a biblioteca vazia e recusa as conquistas.
-- A API oficial **não informa** se uma conquista é perdível, difícil ou rápida. Esses dados vão ser marcados por você (ou vir de fontes externas com link), e o padrão é "desconhecido".
+- A API oficial **não informa** se uma conquista é perdível, difícil ou rápida. Esses dados são marcados por você no planejador (com a fonte), e o padrão é "desconhecido".
 - `GetGlobalAchievementPercentagesForApp` não exige chave; os demais exigem.
