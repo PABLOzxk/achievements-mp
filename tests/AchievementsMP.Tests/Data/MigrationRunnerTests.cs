@@ -45,6 +45,23 @@ public class MigrationRunnerTests
     }
 
     [Fact]
+    public async Task Version_1_database_upgrades_to_latest_keeping_games()
+    {
+        await using var db = TempDatabase.CreateEmpty();
+        await new MigrationRunner(db.Factory, db.Paths.Backups, Schema.All.Take(1).ToList()).MigrateAsync();
+        await using (var c = await db.Factory.OpenAsync())
+            await c.ExecuteAsync("INSERT INTO games(app_id, name, first_seen_utc, library_synced_utc) VALUES (620, 'Portal 2', 0, 0)");
+
+        var result = await new MigrationRunner(db.Factory, db.Paths.Backups).MigrateAsync();
+
+        Assert.Equal(1, result.FromVersion);
+        Assert.Equal(Schema.LatestVersion, result.ToVersion);
+        Assert.NotNull(result.BackupPath);
+        var games = await new AchievementsMP.Data.Repositories.SteamCatalogRepository(db.Factory).GetSyncStatesAsync();
+        Assert.Equal("Portal 2", Assert.Single(games).Name);
+    }
+
+    [Fact]
     public async Task Failed_migration_rolls_back_and_leaves_version_untouched()
     {
         await using var db = await TempDatabase.CreateMigratedAsync();

@@ -8,7 +8,11 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace AchievementsMP.App.ViewModels;
 
-public sealed record LanguageOption(string Code, string Label);
+public sealed record LanguageOption(string Code, string Label)
+{
+    // A caixa fechada do ComboBox exibe ToString(); sem isto aparece "LanguageOption { Code = … }".
+    public override string ToString() => Label;
+}
 
 public sealed partial class SettingsViewModel(ISettingsStore store, ISecretStore secrets, ISteamWebApi steam, AppPaths paths) : PageViewModel
 {

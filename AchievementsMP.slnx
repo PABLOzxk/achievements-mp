@@ -4,6 +4,7 @@
     <Project Path="src/AchievementsMP.Core/AchievementsMP.Core.csproj" />
     <Project Path="src/AchievementsMP.Data/AchievementsMP.Data.csproj" />
     <Project Path="src/AchievementsMP.Steam/AchievementsMP.Steam.csproj" />
+    <Project Path="src/AchievementsMP.Sync/AchievementsMP.Sync.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AchievementsMP.Tests/AchievementsMP.Tests.csproj" />

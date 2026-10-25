@@ -8,21 +8,6 @@ public abstract class PlaceholderPageViewModel : PageViewModel
     public abstract IReadOnlyList<string> Planned { get; }
 }
 
-public sealed class LibraryViewModel : PlaceholderPageViewModel
-{
-    public override string Title => "Minha biblioteca";
-    public override string Glyph => "";
-    public override string Phase => "Fase 3 — Organização";
-    public override string Summary => "Todos os seus jogos com o progresso de conquistas de cada um.";
-    public override IReadOnlyList<string> Planned =>
-    [
-        "Pesquisa por nome",
-        "Filtros por progresso e raridade",
-        "Ordenar por tempo de jogo ou conquistas restantes",
-        "Listas personalizadas e favoritos",
-    ];
-}
-
 public sealed class GameDetailsViewModel : PlaceholderPageViewModel
 {
     public override string Title => "Detalhes do jogo";

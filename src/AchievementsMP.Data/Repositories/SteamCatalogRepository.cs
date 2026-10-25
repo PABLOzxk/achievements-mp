@@ -1,5 +1,6 @@
 using AchievementsMP.Core.Domain;
 using AchievementsMP.Core.Progress;
+using AchievementsMP.Core.Sync;
 using Dapper;
 
 namespace AchievementsMP.Data.Repositories;
@@ -13,7 +14,11 @@ public sealed record LibraryGame(
     bool IsOwned,
     DataAvailability Availability,
     DateTimeOffset? PlayerSyncedUtc,
-    GameProgress Progress);
+    string? LastError,
+    GameProgress Progress)
+{
+    public string? IconUrl => IconHash is null ? null : $"https://media.steampowered.com/steamcommunity/public/images/apps/{AppId}/{IconHash}.jpg";
+}
 
 /// <summary>
 /// Escreve os dados oficiais da Steam. Todas as escritas são upserts idempotentes e nunca apagam linhas:
@@ -60,7 +65,7 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
     }
 
     /// <summary>Grava o esquema de conquistas. Conquistas que sumiram do esquema são marcadas como removidas, não apagadas.</summary>
-    public async Task UpsertSchemaAsync(long appId, IReadOnlyCollection<AchievementDefinition> schema, DateTimeOffset now, CancellationToken ct = default)
+    public async Task UpsertSchemaAsync(long appId, IReadOnlyCollection<AchievementDefinition> schema, DateTimeOffset now, string? language = null, CancellationToken ct = default)
     {
         await using var c = await factory.OpenAsync(ct);
         await using var tx = await c.BeginTransactionAsync(ct);
@@ -87,9 +92,18 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
                 : "UPDATE achievements SET is_removed = 1 WHERE app_id = @appId AND api_name NOT IN @names",
             new { appId, names }, tx, cancellationToken: ct));
 
-        await c.ExecuteAsync(new CommandDefinition(
-            "UPDATE games SET schema_synced_utc = @ts, availability = CASE WHEN @empty THEN @none ELSE availability END WHERE app_id = @appId",
-            new { appId, ts = Time.ToUnix(now), empty = names.Length == 0, none = (int)DataAvailability.NoAchievements }, tx, cancellationToken: ct));
+        await c.ExecuteAsync(new CommandDefinition("""
+            UPDATE games SET
+                schema_synced_utc = @ts,
+                schema_language = @language,
+                availability = CASE
+                    WHEN @empty THEN @none
+                    WHEN availability = @none THEN @notSynced
+                    ELSE availability END
+            WHERE app_id = @appId
+            """,
+            new { appId, ts = Time.ToUnix(now), language, empty = names.Length == 0, none = (int)DataAvailability.NoAchievements, notSynced = (int)DataAvailability.NotSynced },
+            tx, cancellationToken: ct));
 
         await tx.CommitAsync(ct);
     }
@@ -116,7 +130,7 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
         }
 
         await c.ExecuteAsync(new CommandDefinition(
-            "UPDATE games SET player_synced_utc = @ts, availability = @available WHERE app_id = @appId",
+            "UPDATE games SET player_synced_utc = @ts, player_synced_playtime = playtime_minutes, availability = @available, last_error = NULL WHERE app_id = @appId",
             new { appId, ts, available = (int)DataAvailability.Available }, tx, cancellationToken: ct));
 
         await tx.CommitAsync(ct);
@@ -138,12 +152,62 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
     }
 
     /// <summary>Registra por que os dados de um jogo estão incompletos, sem alterar o progresso já salvo.</summary>
-    public async Task SetAvailabilityAsync(long appId, DataAvailability availability, CancellationToken ct = default)
+    public async Task SetAvailabilityAsync(long appId, DataAvailability availability, string? error = null, CancellationToken ct = default)
     {
         await using var c = await factory.OpenAsync(ct);
         await c.ExecuteAsync(new CommandDefinition(
-            "UPDATE games SET availability = @availability WHERE app_id = @appId",
-            new { appId, availability = (int)availability }, cancellationToken: ct));
+            "UPDATE games SET availability = @availability, last_error = @error WHERE app_id = @appId",
+            new { appId, availability = (int)availability, error }, cancellationToken: ct));
+    }
+
+    public async Task<IReadOnlyList<GameSyncState>> GetSyncStatesAsync(CancellationToken ct = default)
+    {
+        await using var c = await factory.OpenAsync(ct);
+        var rows = await c.QueryAsync<SyncRow>(new CommandDefinition("""
+            SELECT g.app_id AS AppId, g.name AS Name, g.playtime_minutes AS PlaytimeMinutes, g.last_played_utc AS LastPlayedUtc,
+                   g.is_owned AS IsOwned, g.availability AS Availability, g.schema_synced_utc AS SchemaSyncedUtc,
+                   g.schema_language AS SchemaLanguage, g.player_synced_utc AS PlayerSyncedUtc,
+                   g.player_synced_playtime AS PlayerSyncedPlaytime,
+                   (SELECT COUNT(*) FROM achievements a WHERE a.app_id = g.app_id AND a.is_removed = 0) AS AchievementCount
+            FROM games g
+            """, cancellationToken: ct));
+        return rows.Select(r => new GameSyncState(
+            r.AppId, r.Name, (int)r.PlaytimeMinutes, Time.FromUnix(r.LastPlayedUtc), r.IsOwned != 0, (DataAvailability)r.Availability,
+            Time.FromUnix(r.SchemaSyncedUtc), r.SchemaLanguage, Time.FromUnix(r.PlayerSyncedUtc), (int?)r.PlayerSyncedPlaytime, (int)r.AchievementCount)).ToList();
+    }
+
+    /// <summary>SteamID64 dono dos dados da Steam no banco (para não misturar contas).</summary>
+    public async Task<ulong?> GetOwnerSteamIdAsync(CancellationToken ct = default)
+    {
+        await using var c = await factory.OpenAsync(ct);
+        var raw = await c.QuerySingleOrDefaultAsync<string?>(new CommandDefinition(
+            "SELECT CAST(value AS TEXT) FROM settings WHERE key = 'catalog_owner_steam_id'", cancellationToken: ct));
+        return ulong.TryParse(raw, out var id) ? id : null;
+    }
+
+    /// <summary>
+    /// Troca o dono dos dados da Steam. Se mudou de conta, o progresso da conta anterior é descartado
+    /// (é dado da Steam, recuperável) e os jogos voltam a "não possuído" até a próxima importação.
+    /// Listas, metas e anotações não são tocadas.
+    /// </summary>
+    public async Task SetOwnerSteamIdAsync(ulong steamId, CancellationToken ct = default)
+    {
+        var current = await GetOwnerSteamIdAsync(ct);
+        if (current == steamId) return;
+
+        await using var c = await factory.OpenAsync(ct);
+        await using var tx = await c.BeginTransactionAsync(ct);
+        if (current is not null)
+        {
+            await c.ExecuteAsync(new CommandDefinition("DELETE FROM player_achievements", transaction: tx, cancellationToken: ct));
+            await c.ExecuteAsync(new CommandDefinition(
+                "UPDATE games SET is_owned = 0, player_synced_utc = NULL, player_synced_playtime = NULL, playtime_minutes = 0, last_played_utc = NULL, last_error = NULL, availability = CASE WHEN availability = @none THEN availability ELSE @notSynced END",
+                new { none = (int)DataAvailability.NoAchievements, notSynced = (int)DataAvailability.NotSynced }, tx, cancellationToken: ct));
+        }
+        await c.ExecuteAsync(new CommandDefinition(
+            "INSERT INTO settings(key, value) VALUES ('catalog_owner_steam_id', @value) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            new { value = steamId.ToString() }, tx, cancellationToken: ct));
+        await tx.CommitAsync(ct);
     }
 
     public async Task<GameProgress> GetProgressAsync(long appId, CancellationToken ct = default)
@@ -162,7 +226,7 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
         var rows = await c.QueryAsync<LibraryRow>(new CommandDefinition($"""
             SELECT g.app_id AS AppId, g.name AS Name, g.icon_hash AS IconHash, g.playtime_minutes AS PlaytimeMinutes,
                    g.last_played_utc AS LastPlayedUtc, g.is_owned AS IsOwned, g.availability AS Availability,
-                   g.player_synced_utc AS PlayerSyncedUtc,
+                   g.player_synced_utc AS PlayerSyncedUtc, g.last_error AS LastError,
                    COUNT(a.api_name) AS Total,
                    COALESCE(SUM(CASE WHEN p.state = 2 THEN 1 ELSE 0 END), 0) AS Unlocked,
                    COALESCE(SUM(CASE WHEN p.state = 1 THEN 1 ELSE 0 END), 0) AS Locked
@@ -176,7 +240,7 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
 
         return rows.Select(r => new LibraryGame(
             r.AppId, r.Name, r.IconHash, (int)r.PlaytimeMinutes, Time.FromUnix(r.LastPlayedUtc), r.IsOwned != 0,
-            (DataAvailability)r.Availability, Time.FromUnix(r.PlayerSyncedUtc),
+            (DataAvailability)r.Availability, Time.FromUnix(r.PlayerSyncedUtc), r.LastError,
             new GameProgress((int)r.Total, (int)r.Unlocked, (int)r.Locked, (int)(r.Total - r.Unlocked - r.Locked)))).ToList();
     }
 
@@ -190,8 +254,24 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
         public long IsOwned { get; init; }
         public long Availability { get; init; }
         public long? PlayerSyncedUtc { get; init; }
+        public string? LastError { get; init; }
         public long Total { get; init; }
         public long Unlocked { get; init; }
         public long Locked { get; init; }
+    }
+
+    private sealed class SyncRow
+    {
+        public long AppId { get; init; }
+        public string Name { get; init; } = "";
+        public long PlaytimeMinutes { get; init; }
+        public long? LastPlayedUtc { get; init; }
+        public long IsOwned { get; init; }
+        public long Availability { get; init; }
+        public long? SchemaSyncedUtc { get; init; }
+        public string? SchemaLanguage { get; init; }
+        public long? PlayerSyncedUtc { get; init; }
+        public long? PlayerSyncedPlaytime { get; init; }
+        public long AchievementCount { get; init; }
     }
 }

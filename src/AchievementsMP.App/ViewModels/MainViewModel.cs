@@ -7,11 +7,18 @@ namespace AchievementsMP.App.ViewModels;
 
 public sealed partial class MainViewModel : ObservableObject
 {
-    public MainViewModel(OverviewViewModel overview, LibraryViewModel library, GameDetailsViewModel details, PlannerViewModel planner, SettingsViewModel settings, StatusInfo status)
+    public MainViewModel(OverviewViewModel overview, LibraryViewModel library, GameDetailsViewModel details, PlannerViewModel planner, SettingsViewModel settings,
+        SyncCoordinator sync, StatusInfo status)
     {
         Pages = [overview, library, details, planner];
         Settings = settings;
+        Sync = sync;
         Status = status;
+        sync.DataChanged += () =>
+        {
+            if (CurrentPage is OverviewViewModel or LibraryViewModel)
+                _ = LoadAsync(CurrentPage);
+        };
         overview.NavigateToSettings = () => Navigate(settings);
         _currentPage = overview;
         overview.IsActive = true;
@@ -19,6 +26,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public ObservableCollection<PageViewModel> Pages { get; }
     public SettingsViewModel Settings { get; }
+    public SyncCoordinator Sync { get; }
     public StatusInfo Status { get; }
 
     [ObservableProperty]
@@ -34,7 +42,18 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void Navigate(PageViewModel page) => CurrentPage = page;
 
-    public Task InitializeAsync() => LoadAsync(CurrentPage);
+    public async Task InitializeAsync()
+    {
+        await LoadAsync(CurrentPage);
+        try
+        {
+            await Sync.InitializeAsync();
+        }
+        catch (Exception ex)
+        {
+            FileLog.Error("Falha ao iniciar a sincronização automática", ex);
+        }
+    }
 
     private static async Task LoadAsync(PageViewModel page)
     {

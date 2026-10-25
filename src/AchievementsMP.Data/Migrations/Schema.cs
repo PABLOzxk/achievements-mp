@@ -128,6 +128,15 @@ public static class Schema
                 value BLOB
             ) WITHOUT ROWID;
             """),
+
+        new(2, "incremental_sync", """
+            -- Tempo de jogo no momento da última leitura de conquistas: se mudou, o jogador jogou e vale reconsultar.
+            ALTER TABLE games ADD COLUMN player_synced_playtime INTEGER;
+            -- Idioma em que o esquema foi baixado: trocar o idioma nas configurações força nova leitura.
+            ALTER TABLE games ADD COLUMN schema_language TEXT;
+            -- Última falha por jogo, para mostrar o motivo na interface.
+            ALTER TABLE games ADD COLUMN last_error TEXT;
+            """),
     ];
 
     public static int LatestVersion => All[^1].Version;

@@ -7,7 +7,7 @@ namespace AchievementsMP.App.ViewModels;
 public sealed partial class OverviewViewModel(SteamCatalogRepository catalog, AchievementsMP.Core.Settings.ISecretStore secrets) : PageViewModel
 {
     public override string Title => "Visão geral";
-    public override string Glyph => "";
+    public override string Glyph => "\uE80F";
 
     internal Action? NavigateToSettings { get; set; }
 
@@ -17,6 +17,7 @@ public sealed partial class OverviewViewModel(SteamCatalogRepository catalog, Ac
     [ObservableProperty] private int _nearlyComplete;
     [ObservableProperty] private bool _hasData;
     [ObservableProperty] private bool _needsSetup;
+    [ObservableProperty] private IReadOnlyList<LibraryItem> _closest = [];
 
     public override async Task OnNavigatedToAsync()
     {
@@ -25,8 +26,17 @@ public sealed partial class OverviewViewModel(SteamCatalogRepository catalog, Ac
         UnlockedCount = library.Sum(g => g.Progress.Unlocked);
         CompletedGames = library.Count(g => g.Progress.IsComplete);
         NearlyComplete = library.Count(g => g.Progress.Percent is >= 80 && !g.Progress.IsComplete);
-        HasData = library.Count > 0;
+        HasData = library.Any(g => g.Progress.Total > 0);
         NeedsSetup = string.IsNullOrEmpty(await secrets.GetSteamApiKeyAsync());
+
+        // Mais perto de 100%: maior percentual, desempate por menos conquistas faltando. Só com dados completos.
+        Closest = library
+            .Where(g => g.Progress.Total > 0 && !g.Progress.IsComplete && g.Progress.IsExact && g.Progress.Unlocked > 0)
+            .OrderByDescending(g => g.Progress.Percent)
+            .ThenBy(g => g.Progress.KnownRemaining)
+            .Take(6)
+            .Select(LibraryItem.From)
+            .ToList();
     }
 
     [RelayCommand]

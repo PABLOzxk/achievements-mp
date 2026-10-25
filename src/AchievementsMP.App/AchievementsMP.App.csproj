@@ -13,6 +13,7 @@
     <ProjectReference Include="..\AchievementsMP.Core\AchievementsMP.Core.csproj" />
     <ProjectReference Include="..\AchievementsMP.Data\AchievementsMP.Data.csproj" />
     <ProjectReference Include="..\AchievementsMP.Steam\AchievementsMP.Steam.csproj" />
+    <ProjectReference Include="..\AchievementsMP.Sync\AchievementsMP.Sync.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />

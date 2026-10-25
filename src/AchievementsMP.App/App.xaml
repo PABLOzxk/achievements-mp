@@ -1,6 +1,7 @@
 <Application x:Class="AchievementsMP.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:AchievementsMP.App.Converters"
              ShutdownMode="OnMainWindowClose">
     <Application.Resources>
         <ResourceDictionary>
@@ -9,6 +10,46 @@
                 <ResourceDictionary Source="Theme/Controls.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+            <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
+
+            <!-- Linha de jogo (biblioteca e visão geral) -->
+            <DataTemplate x:Key="GameRow">
+                <Grid Height="48">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="44" />
+                        <ColumnDefinition Width="*" MinWidth="160" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="280" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="32" Height="32" CornerRadius="2" Background="{StaticResource InputBrush}" HorizontalAlignment="Left">
+                        <Image Source="{Binding IconUrl, TargetNullValue={x:Null}}" Width="32" Height="32" RenderOptions.BitmapScalingMode="HighQuality" />
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Text="{Binding Name}" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding PlaytimeText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                    </StackPanel>
+                    <Border Grid.Column="2" Style="{StaticResource Badge}" Margin="0,0,16,0" ToolTip="{Binding BadgeTooltip}">
+                        <Border.Visibility>
+                            <Binding Path="Badge">
+                                <Binding.Converter>
+                                    <conv:NotNullToVisibilityConverter />
+                                </Binding.Converter>
+                            </Binding>
+                        </Border.Visibility>
+                        <TextBlock Text="{Binding Badge}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource WarningBrush}" />
+                    </Border>
+                    <StackPanel Grid.Column="3" VerticalAlignment="Center">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                                       Text="{Binding Percent, StringFormat={}{0:0}%}"
+                                       Visibility="{Binding ShowBar, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock Text="{Binding ProgressText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
+                        </DockPanel>
+                        <ProgressBar Margin="0,5,0,0" Maximum="100" Value="{Binding Percent, Mode=OneWay}"
+                                     Visibility="{Binding ShowBar, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </Grid>
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

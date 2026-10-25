@@ -13,6 +13,7 @@
     <ProjectReference Include="..\..\src\AchievementsMP.Core\AchievementsMP.Core.csproj" />
     <ProjectReference Include="..\..\src\AchievementsMP.Data\AchievementsMP.Data.csproj" />
     <ProjectReference Include="..\..\src\AchievementsMP.Steam\AchievementsMP.Steam.csproj" />
+    <ProjectReference Include="..\..\src\AchievementsMP.Sync\AchievementsMP.Sync.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

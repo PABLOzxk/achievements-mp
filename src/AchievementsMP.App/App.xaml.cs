@@ -10,6 +10,7 @@ using AchievementsMP.Data.Migrations;
 using AchievementsMP.Data.Repositories;
 using AchievementsMP.Steam;
 using AchievementsMP.Steam.Http;
+using AchievementsMP.Sync;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AchievementsMP.App;
@@ -75,6 +76,12 @@ public partial class App : Application
             var secrets = sp.GetRequiredService<ISecretStore>();
             return new SteamWebApiClient(http, secrets.GetSteamApiKeyAsync);
         });
+
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton(sp => new SyncService(
+            sp.GetRequiredService<ISteamWebApi>(), sp.GetRequiredService<ISettingsStore>(), sp.GetRequiredService<SteamCatalogRepository>(),
+            sp.GetRequiredService<SyncRunRepository>(), sp.GetRequiredService<TimeProvider>()));
+        services.AddSingleton<SyncCoordinator>();
 
         services.AddSingleton(new StatusInfo(paths.Root, schemaVersion, AppVersion));
         services.AddSingleton<OverviewViewModel>();

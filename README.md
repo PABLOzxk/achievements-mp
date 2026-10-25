@@ -3,16 +3,25 @@
 App Windows para acompanhar conquistas da Steam: biblioteca, progresso por jogo, metas e um planejador de 100%.
 Tudo fica num banco SQLite local; a Steam é consultada só para leitura.
 
-## Estado atual: Fase 1 (fundação)
+## Estado atual: Fase 2 (sincronização)
 
 | Pronto | Ainda não |
 | --- | --- |
-| Solução .NET 10 (LTS) em camadas | Sincronização com a Steam (Fase 2) |
-| Banco SQLite com migrações, backup automático e rollback | Biblioteca, filtros, listas na UI (Fase 3) |
-| Configurações persistidas; chave da API cifrada com DPAPI | Planejador e guias (Fase 4) |
-| Cliente da Steam Web API (6 endpoints) com erros classificados | Instalador (Fase 5) |
-| Tema escuro estilo Steam, navegação lateral, 4 telas + Configurações | |
-| 53 testes xUnit cobrindo as regras obrigatórias do plano | |
+| Solução .NET 10 (LTS) em camadas, SQLite com migrações e backup | Filtros, ordenação, listas e detalhes do jogo (Fase 3) |
+| Configurações persistidas; chave da API cifrada com DPAPI | Planejador, metas e guias (Fase 4) |
+| Sincronização real: biblioteca, conquistas, progresso e raridade global | Instalador (Fase 5) |
+| Sincronização incremental, ao abrir e periódica; botão Sincronizar/Cancelar | |
+| Biblioteca com busca e progresso por jogo; visão geral com dados reais | |
+| 82 testes xUnit, CI no Windows | |
+
+## Como a sincronização funciona
+
+1. Lê a biblioteca (`GetOwnedGames`). Resposta vazia = perfil ou "Detalhes do jogo" privados: para e avisa, sem tocar nos dados.
+2. Decide jogo a jogo o que reler (`SyncPlanner`): a primeira vez lê tudo; depois, só jogos com tempo de jogo novo, jogados desde a última leitura, que falharam antes, com idioma trocado ou com dados mais velhos que 7 dias (progresso) / 30 dias (lista de conquistas). Jogos sem conquistas são reconferidos a cada 30 dias.
+3. Para cada jogo: esquema + raridade global (quando preciso) e progresso do jogador. Cada jogo é gravado sozinho: se cair a internet no meio, o que já foi salvo fica.
+4. Até 4 jogos em paralelo, no máximo ~6 chamadas/s. Erros de rede/5xx são repetidos (2s, 4s, 8s); 429 pausa todas as chamadas pelo tempo que a Steam pedir.
+5. Chave inválida ou "Detalhes do jogo" privados interrompem tudo na hora, em vez de gastar centenas de chamadas.
+6. Trocar de conta descarta o progresso da conta anterior (dado da Steam), mas nunca listas, metas ou anotações.
 
 ## Rodar no Windows
 
