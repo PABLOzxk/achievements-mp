@@ -88,13 +88,15 @@ campanha parecem raras só porque muita gente abandona antes. É um indicador pa
 ## Publicar uma versão
 
 1. Suba a `<Version>` em `src/AchievementsMP.App/AchievementsMP.App.csproj` e, se quiser notas, crie `docs/notas/vX.Y.Z.md`.
-2. Crie e envie a tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
-3. O workflow **Release** roda os testes, gera o instalador com o Velopack, instala num Windows limpo para conferir e
-   publica nas Releases. O app instalado de quem já usa encontra a versão nova sozinho.
+2. Rode o workflow **Release** manualmente (Actions → Release → Run workflow). Ele roda os testes, gera o instalador
+   com o Velopack e, num Windows limpo, instala, atualiza para uma versão de teste e desinstala, conferindo que a
+   pasta de dados não foi tocada. O resultado é um **rascunho** nas Releases, que só quem tem acesso ao repositório vê.
+3. Baixe o `Setup.exe` do rascunho e teste. Se estiver bom, clique em **Publish release** no rascunho. A partir daí
+   o app instalado de quem já usa encontra a versão nova sozinho.
 
-Para testar sem publicar, rode o workflow manualmente (Actions → Release → Run workflow): ele cria um rascunho, que só
-quem tem acesso ao repositório vê. O `PACK_ID` (`AchievementsMP.App`) nunca deve mudar, porque é ele que liga as
-instalações às atualizações.
+Rodar o workflow de novo para a mesma versão substitui o rascunho. Uma versão publicada nunca é substituída: suba a
+`<Version>`. Também dá para publicar direto, sem rascunho, enviando a tag (`git tag vX.Y.Z && git push origin vX.Y.Z`).
+O `PACK_ID` (`AchievementsMP.App`) nunca deve mudar, porque é ele que liga as instalações às atualizações.
 
 ## Rodar no Windows (desenvolvimento)
 
@@ -132,7 +134,11 @@ tests/
 - **Dado ausente não vira pendente.** Conquista sem estado conhecido é `Unknown`. O percentual é um piso e `IsExact` diz se pode ser exibido como definitivo.
 - **Resposta vazia da biblioteca = perfil privado**, não "biblioteca vazia". Ela nunca marca seus jogos como não possuídos.
 - **Migrações seguras.** Backup antes de alterar um banco existente, cada migração numa transação, recusa abrir banco de versão mais nova.
-- **A chave da API não vaza.** Cifrada com DPAPI (usuário atual) e nunca incluída em mensagens de erro.
+- **A chave da API não vaza.** Cifrada com DPAPI (usuário atual), nunca incluída em mensagens de erro ou logs, e o cliente HTTP não segue redirecionamentos (a chave vai na URL e não pode ser levada para outro endereço).
+- **Banco danificado tem saída.** Se o arquivo não abre, o app oferece restaurar um backup ou começar do zero, e guarda o arquivo danificado em `backups\` em vez de apagar.
+- **Dados do banco não viram comandos.** Links de guia só abrem se forem http/https; ícones só carregam por https (um caminho de rede num backup adulterado não é acessado).
+
+Veja também [SEGURANCA.md](SEGURANCA.md).
 
 ## Steam: o que é preciso saber
 

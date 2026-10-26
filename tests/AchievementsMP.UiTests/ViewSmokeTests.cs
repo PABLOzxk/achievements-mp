@@ -144,6 +144,17 @@ public class ViewSmokeTests
         Assert.NotEmpty(setup.KeyShapeWarning);
         Assert.False(setup.FinishCommand.CanExecute(null));
 
+        // Janela de recuperação de banco danificado (aparece antes da principal, com os mesmos estilos).
+        var recovery = new DatabaseRecoveryWindow("file is not a database", paths.Backups);
+        Render((FrameworkElement)recovery.Content, new object());
+        Assert.Equal(RecoveryChoice.Close, recovery.Choice);
+
+        // Ícones: só https é carregado; caminho de rede ou de arquivo vindo do banco é ignorado.
+        var icons = new AchievementsMP.App.Converters.WebImageConverter();
+        Assert.IsType<System.Windows.Media.Imaging.BitmapImage>(icons.Convert("https://media.steampowered.com/a/b.jpg", typeof(object), null!, null!));
+        Assert.Null(icons.Convert(@"\\servidor\compartilhamento\a.jpg", typeof(object), null!, null!));
+        Assert.Null(icons.Convert("file:///C:/Windows/win.ini", typeof(object), null!, null!));
+
         // Fechar o app: com backup do dia já feito, não cria outro.
         await main.BeforeExitAsync();
         Assert.Single(BackupService.List(backupFolder));
@@ -163,7 +174,9 @@ public class ViewSmokeTests
 
         string[] hades = ["feita", "rara", "perdivel", "rapida", "longa", "semclasse", "alta"];
         string[] unlocked = ["feita", "rara"];
-        await steam.UpsertSchemaAsync(Hades, hades.Select(a => new AchievementDefinition(Hades, a, $"Conquista {a}", $"Descrição de {a}", a == "semclasse", null, null)).ToList(), T0);
+        // Um ícone de rede (como num backup adulterado) precisa ser ignorado sem erro.
+        await steam.UpsertSchemaAsync(Hades, hades.Select(a => new AchievementDefinition(Hades, a, $"Conquista {a}", $"Descrição de {a}", a == "semclasse",
+            a == "rara" ? @"\\servidor\icone.jpg" : null, null)).ToList(), T0);
         await steam.ApplyPlayerStatesAsync(Hades,
             hades.Select(a => unlocked.Contains(a)
                 ? new PlayerAchievementState(Hades, a, UnlockState.Unlocked, T0)

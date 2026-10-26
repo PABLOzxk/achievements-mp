@@ -125,7 +125,7 @@
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <Border Width="32" Height="32" CornerRadius="2" Background="{StaticResource InputBrush}" HorizontalAlignment="Left">
-                                                <Image Source="{Binding IconUrl, TargetNullValue={x:Null}}" Width="32" Height="32" RenderOptions.BitmapScalingMode="HighQuality" />
+                                                <Image Source="{Binding IconUrl, Converter={StaticResource WebImage}}" Width="32" Height="32" RenderOptions.BitmapScalingMode="HighQuality" />
                                             </Border>
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
                                                 <TextBlock Text="{Binding Name}" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />

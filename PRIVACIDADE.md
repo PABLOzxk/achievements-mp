@@ -13,7 +13,7 @@ Na pasta `%LocalAppData%\AchievementsMP`:
 - a sua chave da Steam Web API, cifrada pelo Windows (DPAPI), que só pode ser lida pela sua conta de usuário neste computador;
 - a lista de jogos, conquistas, tempo de jogo e raridade que o app leu da Steam;
 - o que você cria no app: listas, metas, classificações, anotações, checklist e links de guias;
-- cópias de segurança feitas antes de atualizar o banco e registros de funcionamento (logs). Os logs não contêm a chave.
+- cópias de segurança feitas antes de atualizar o banco e registros de funcionamento (logs), apagados depois de 30 dias. Os logs não contêm a chave.
 
 ## Com quem o app se comunica
 

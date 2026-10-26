@@ -11,6 +11,7 @@
             </ResourceDictionary.MergedDictionaries>
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
             <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
+            <conv:WebImageConverter x:Key="WebImage" />
 
             <!-- Linha de jogo (biblioteca e visão geral). Clique ou Enter abre os detalhes. -->
             <Style x:Key="GameListItem" TargetType="ListBoxItem">
@@ -74,7 +75,7 @@
                         <ColumnDefinition Width="280" />
                     </Grid.ColumnDefinitions>
                     <Border Width="32" Height="32" CornerRadius="2" Background="{StaticResource InputBrush}" HorizontalAlignment="Left">
-                        <Image Source="{Binding IconUrl, TargetNullValue={x:Null}}" Width="32" Height="32" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <Image Source="{Binding IconUrl, Converter={StaticResource WebImage}}" Width="32" Height="32" RenderOptions.BitmapScalingMode="HighQuality" />
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <StackPanel Orientation="Horizontal">

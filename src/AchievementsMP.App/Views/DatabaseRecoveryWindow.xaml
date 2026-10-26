@@ -1,0 +1,31 @@
+<Window x:Class="AchievementsMP.App.Views.DatabaseRecoveryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Achievements MP" Icon="/Assets/app.ico" Width="560" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource WindowBrush}"
+        FontFamily="{StaticResource UiFont}"
+        TextOptions.TextFormattingMode="Display">
+    <StackPanel Margin="28,24,28,24">
+        <TextBlock Text="Não foi possível abrir seus dados" Style="{StaticResource PageTitle}" FontSize="22" />
+        <TextBlock Style="{StaticResource Body}" TextWrapping="Wrap" Margin="0,12,0,0"
+                   Text="O arquivo do banco local está danificado (o disco pode ter falhado ou o arquivo foi cortado). Nada foi apagado." />
+        <TextBlock x:Name="DetailText" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,8,0,0" />
+
+        <Border Style="{StaticResource Card}" Margin="0,18,0,0">
+            <StackPanel>
+                <Button x:Name="RestoreButton" Style="{StaticResource PrimaryButton}" Content="Restaurar um backup…" HorizontalAlignment="Left" Click="OnRestore" />
+                <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap"
+                           Text="Escolha um arquivo AchievementsMP-backup-….db da sua pasta de backup (OneDrive, pendrive…)." />
+            </StackPanel>
+        </Border>
+        <Border Style="{StaticResource Card}" Margin="0,10,0,0">
+            <StackPanel>
+                <Button x:Name="StartOverButton" Content="Começar do zero" HorizontalAlignment="Left" Click="OnStartOver" />
+                <TextBlock x:Name="StartOverText" Style="{StaticResource Hint}" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <Button Style="{StaticResource LinkButton}" Content="Fechar sem mudar nada" HorizontalAlignment="Right" Margin="0,16,0,0" Click="OnClose" />
+    </StackPanel>
+</Window>

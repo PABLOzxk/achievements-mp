@@ -1,10 +1,11 @@
 using System.Diagnostics;
-using System.Net.Http;
+using System.IO;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Threading;
 using AchievementsMP.App.Services;
 using AchievementsMP.App.ViewModels;
+using AchievementsMP.App.Views;
 using AchievementsMP.Core.Settings;
 using AchievementsMP.Data;
 using AchievementsMP.Data.Backups;
@@ -51,7 +52,22 @@ public partial class App : Application
             FileLog.Info("Iniciando.");
 
             await WaitForPreviousInstanceAsync(e.Args);
-            var (factory, migration, restore) = await AppDatabase.InitializeAsync(paths);
+            if (!TryBecomeTheOnlyInstance(waitForPrevious: e.Args.Contains(WaitForPidArgument)))
+            {
+                FileLog.Info("Já existe uma janela do app aberta; esta instância foi encerrada.");
+                MessageBox.Show("O Achievements MP já está aberto. Procure a janela dele na barra de tarefas.",
+                    "Achievements MP", MessageBoxButton.OK, MessageBoxImage.Information);
+                Shutdown(0);
+                return;
+            }
+
+            var database = await OpenDatabaseAsync(paths);
+            if (database is null)
+            {
+                Shutdown(1);
+                return;
+            }
+            var (factory, migration, restore) = database.Value;
             if (migration.BackupPath is not null)
                 FileLog.Info($"Banco migrado de v{migration.FromVersion} para v{migration.ToVersion}. Backup: {migration.BackupPath}");
             ReportRestore(restore);
@@ -94,13 +110,8 @@ public partial class App : Application
 
         services.AddSingleton<ISteamWebApi>(sp =>
         {
-            var http = new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(10) })
-            {
-                Timeout = TimeSpan.FromSeconds(20),
-            };
-            http.DefaultRequestHeaders.UserAgent.ParseAdd($"AchievementsMP/{AppVersion}");
             var secrets = sp.GetRequiredService<ISecretStore>();
-            return new SteamWebApiClient(http, secrets.GetSteamApiKeyAsync);
+            return new SteamWebApiClient(SteamWebApiClient.CreateHttpClient($"AchievementsMP/{AppVersion}"), secrets.GetSteamApiKeyAsync);
         });
 
         services.AddSingleton(TimeProvider.System);
@@ -120,6 +131,83 @@ public partial class App : Application
         services.AddSingleton<SetupViewModel>();
         services.AddSingleton<MainViewModel>();
         return services.BuildServiceProvider();
+    }
+
+    // Duas janelas abertas brigariam pelo mesmo banco (sincronizações em dobro, restauração que não consegue trocar o arquivo).
+    private static Mutex? _instanceLock;
+
+    private static bool TryBecomeTheOnlyInstance(bool waitForPrevious)
+    {
+        _instanceLock = new Mutex(initiallyOwned: true, @"Local\AchievementsMP.App", out var createdNew);
+        if (createdNew)
+            return true;
+        try
+        {
+            // Num reinício (restauração), a instância anterior ainda pode estar terminando de fechar.
+            return _instanceLock.WaitOne(waitForPrevious ? TimeSpan.FromSeconds(30) : TimeSpan.Zero);
+        }
+        catch (AbandonedMutexException)
+        {
+            return true; // a anterior caiu sem liberar; agora é desta
+        }
+    }
+
+    /// <summary>
+    /// Abre o banco. Se o arquivo estiver danificado, pergunta o que fazer (restaurar um backup ou começar do zero)
+    /// e tenta de novo; nada é apagado. Nulo = o usuário preferiu fechar.
+    /// </summary>
+    private async Task<(SqliteConnectionFactory, MigrationResult, RestoreOutcome?)?> OpenDatabaseAsync(AppPaths paths)
+    {
+        while (true)
+        {
+            try
+            {
+                return await AppDatabase.InitializeAsync(paths);
+            }
+            catch (Exception ex) when (AppDatabase.IsDamaged(ex))
+            {
+                FileLog.Error("Banco local danificado", ex);
+                // A janela de recuperação não é a principal: fechá-la não pode encerrar o app.
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                var dialog = new DatabaseRecoveryWindow(ex.Message, paths.Backups);
+                dialog.ShowDialog();
+                ShutdownMode = ShutdownMode.OnMainWindowClose;
+                MainWindow = null;
+
+                switch (dialog.Choice)
+                {
+                    case RecoveryChoice.Restore:
+                        await StageBackupForDamagedDatabaseAsync(paths);
+                        break;
+                    case RecoveryChoice.StartOver:
+                        var kept = AppDatabase.SetAsideDamaged(paths, DateTimeOffset.UtcNow);
+                        FileLog.Info($"Começando do zero. Banco danificado guardado em {kept}");
+                        break;
+                    default:
+                        return null;
+                }
+            }
+        }
+    }
+
+    private static async Task StageBackupForDamagedDatabaseAsync(AppPaths paths)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Escolha o backup para restaurar",
+            Filter = "Backup do Achievements MP (*.db)|*.db|Todos os arquivos (*.*)|*.*",
+            CheckFileExists = true,
+        };
+        if (dialog.ShowDialog() != true)
+            return;
+        try
+        {
+            await BackupService.StageRestoreAsync(paths, dialog.FileName);
+        }
+        catch (Exception ex) when (ex is InvalidBackupException or IOException or UnauthorizedAccessException)
+        {
+            MessageBox.Show($"Este arquivo não pode ser usado.\n\n{ex.Message}", "Achievements MP", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private static Task WaitForPreviousInstanceAsync(string[] args)
@@ -199,6 +287,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _services?.Dispose();
+        _instanceLock?.Dispose();
         base.OnExit(e);
     }
 }

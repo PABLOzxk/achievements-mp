@@ -20,7 +20,7 @@
                     <ColumnDefinition Width="200" />
                 </Grid.ColumnDefinitions>
                 <Border Width="48" Height="48" CornerRadius="2" Background="{StaticResource InputBrush}" HorizontalAlignment="Left" VerticalAlignment="Top">
-                    <Image Source="{Binding IconUrl, TargetNullValue={x:Null}}" Width="48" Height="48" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <Image Source="{Binding IconUrl, Converter={StaticResource WebImage}}" Width="48" Height="48" RenderOptions.BitmapScalingMode="HighQuality" />
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
                     <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis">
@@ -86,7 +86,7 @@
             <Button Grid.Column="2" Content="Planejar 100%" Style="{StaticResource PrimaryButton}" Padding="14,7" VerticalAlignment="Top" Margin="16,6,0,0"
                     Command="{Binding OpenPlannerCommand}" />
             <Border Width="64" Height="64" CornerRadius="3" Background="{StaticResource InputBrush}" VerticalAlignment="Top" Margin="0,4,20,0">
-                <Image Source="{Binding Game.IconUrl, TargetNullValue={x:Null}}" Width="64" Height="64" RenderOptions.BitmapScalingMode="HighQuality" />
+                <Image Source="{Binding Game.IconUrl, Converter={StaticResource WebImage}}" Width="64" Height="64" RenderOptions.BitmapScalingMode="HighQuality" />
             </Border>
             <StackPanel Grid.Column="1">
                 <TextBlock Text="{Binding Game.Name}" Style="{StaticResource PageTitle}" TextTrimming="CharacterEllipsis" />

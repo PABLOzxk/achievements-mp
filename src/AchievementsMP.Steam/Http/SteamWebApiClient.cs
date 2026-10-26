@@ -11,6 +11,24 @@ public sealed class SteamWebApiClient(HttpClient http, Func<CancellationToken, T
 {
     public static readonly Uri BaseAddress = new("https://api.steampowered.com/");
 
+    /// <summary>
+    /// HttpClient do app. Sem seguir redirecionamentos: a chave vai na URL, e um redirecionamento a levaria junto
+    /// para outro endereço. A Steam Web API não redireciona; se um dia redirecionar, vira "resposta inesperada".
+    /// </summary>
+    public static HttpClient CreateHttpClient(string userAgent)
+    {
+        var http = new HttpClient(new SocketsHttpHandler
+        {
+            AllowAutoRedirect = false,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(10),
+        })
+        {
+            Timeout = TimeSpan.FromSeconds(20),
+        };
+        http.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
+        return http;
+    }
+
     public async Task<SteamResult<ulong>> ResolveVanityUrlAsync(string vanityName, CancellationToken ct = default)
     {
         var r = await GetAsync("ISteamUser/ResolveVanityURL/v1/", new() { ["vanityurl"] = vanityName }, requiresKey: true, ct);

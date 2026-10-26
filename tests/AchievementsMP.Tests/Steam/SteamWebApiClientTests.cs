@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 using AchievementsMP.Steam;
 using AchievementsMP.Steam.Http;
 
@@ -108,5 +109,41 @@ public class SteamWebApiClientTests
         var (client, _) = Create(_ => { cts.Cancel(); cts.Token.ThrowIfCancellationRequested(); return null!; });
         var r = await client.GetOwnedGamesAsync(76561197960435530, cts.Token);
         Assert.Equal(SteamErrorKind.Cancelled, r.Error!.Kind);
+    }
+
+    [Fact]
+    public async Task Redirects_are_not_followed_so_the_key_stays_with_steam()
+    {
+        // Servidor local que responde com um redirecionamento para outro endereço.
+        int port;
+        using (var probe = new TcpListener(IPAddress.Loopback, 0))
+        {
+            probe.Start();
+            port = ((IPEndPoint)probe.LocalEndpoint).Port;
+        }
+        using var server = new HttpListener();
+        server.Prefixes.Add($"http://127.0.0.1:{port}/");
+        server.Start();
+        var requests = new List<string>();
+        var serving = Task.Run(async () =>
+        {
+            while (server.IsListening)
+            {
+                HttpListenerContext ctx;
+                try { ctx = await server.GetContextAsync(); } catch (Exception) { return; }
+                lock (requests) requests.Add(ctx.Request.Url!.PathAndQuery);
+                ctx.Response.StatusCode = 302;
+                ctx.Response.RedirectLocation = $"http://127.0.0.1:{port}/outro-site";
+                ctx.Response.Close();
+            }
+        });
+
+        using var http = SteamWebApiClient.CreateHttpClient("teste");
+        using var response = await http.GetAsync($"http://127.0.0.1:{port}/api?key={Key}");
+
+        Assert.Equal(HttpStatusCode.Found, response.StatusCode);
+        lock (requests) Assert.Equal([$"/api?key={Key}"], requests);
+        server.Stop();
+        await serving;
     }
 }

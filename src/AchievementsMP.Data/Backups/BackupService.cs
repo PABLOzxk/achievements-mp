@@ -139,7 +139,10 @@ public sealed partial class BackupService(SqliteConnectionFactory factory, AppPa
     }
 
     /// <summary>Valida e deixa o backup pronto para ser aplicado na próxima abertura do app.</summary>
-    public async Task<BackupSummary> StageRestoreAsync(string file, CancellationToken ct = default)
+    public Task<BackupSummary> StageRestoreAsync(string file, CancellationToken ct = default) => StageRestoreAsync(paths, file, ct);
+
+    /// <summary>Igual, sem precisar do banco aberto: usado quando o banco atual está danificado.</summary>
+    public static async Task<BackupSummary> StageRestoreAsync(AppPaths paths, string file, CancellationToken ct = default)
     {
         var summary = await InspectAsync(file, ct);
         var partial = paths.PendingRestore + ".partial";
@@ -175,16 +178,23 @@ public sealed partial class BackupService(SqliteConnectionFactory factory, AppPa
             {
                 Directory.CreateDirectory(paths.Backups);
                 safety = Path.Combine(paths.Backups, $"antes-de-restaurar-{now.ToLocalTime().ToString(DateFormat, CultureInfo.InvariantCulture)}.db");
-                // Pela API de backup do SQLite: inclui o que ainda estiver no arquivo -wal.
-                await using (var current = new SqliteConnection(new SqliteConnectionStringBuilder
+                try
                 {
-                    DataSource = paths.Database,
-                    Mode = SqliteOpenMode.ReadWrite,
-                    Pooling = false,
-                }.ToString()))
-                {
+                    // Pela API de backup do SQLite: inclui o que ainda estiver no arquivo -wal.
+                    await using var current = new SqliteConnection(new SqliteConnectionStringBuilder
+                    {
+                        DataSource = paths.Database,
+                        Mode = SqliteOpenMode.ReadWrite,
+                        Pooling = false,
+                    }.ToString());
                     await current.OpenAsync(ct);
                     await CopyDatabaseAsync(current, safety, ct);
+                }
+                catch (SqliteException)
+                {
+                    // Banco atual danificado (muitas vezes é por isso que se restaura): guarda os arquivos como estão.
+                    TryDelete(safety);
+                    CopyFiles(paths.Database, safety);
                 }
             }
 
@@ -215,6 +225,14 @@ public sealed partial class BackupService(SqliteConnectionFactory factory, AppPa
         await using var cmd = target.CreateCommand();
         cmd.CommandText = "PRAGMA journal_mode=DELETE;";
         await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    /// <summary>Copia o banco e o -wal ao lado dele, byte a byte, sem abrir pelo SQLite.</summary>
+    internal static void CopyFiles(string database, string target)
+    {
+        File.Copy(database, target, overwrite: true);
+        if (File.Exists(database + "-wal"))
+            File.Copy(database + "-wal", target + "-wal", overwrite: true);
     }
 
     private static void Prune(string folder)

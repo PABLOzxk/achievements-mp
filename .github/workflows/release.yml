@@ -40,16 +40,44 @@ jobs:
             exit 1
           fi
 
+      # Rascunho aprovado e publicado no site cria a tag e dispara este fluxo de novo: aí não há nada a fazer.
+      # Rascunho antigo da mesma versão é apagado para dar lugar ao novo (o vpk recusa tag repetida).
+      - name: Conferir o que já foi enviado
+        id: existing
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="v${{ steps.version.outputs.version }}"
+          found=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq "map(select(.tag_name == \"$tag\")) | .[0] // empty | \"\(.id) \(.draft)\"")
+          read -r id draft <<< "$found"
+          if [[ "$draft" == "false" ]]; then
+            if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+              echo "A versão $tag já está publicada; nada a fazer."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "::error::A versão $tag já está publicada. Aumente a <Version> do app antes de gerar outra."
+            exit 1
+          fi
+          if [[ "$draft" == "true" ]]; then
+            echo "Apagando o rascunho anterior de $tag (id $id)."
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+          fi
+
       - name: Testes
+        if: steps.existing.outputs.skip != 'true'
         run: |
           dotnet restore
           dotnet build --no-restore -c Release
           dotnet test --no-build -c Release
 
       - name: Publicar o app
+        if: steps.existing.outputs.skip != 'true'
         run: dotnet publish src/AchievementsMP.App -c Release -r win-x64 --self-contained true -p:DebugType=none -o publish
 
       - name: Empacotar
+        if: steps.existing.outputs.skip != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -64,24 +92,64 @@ jobs:
           fi
           ./.tools/vpk pack -u "$PACK_ID" -v "${{ steps.version.outputs.version }}" -p publish -e AchievementsMP.exe \
             --packTitle "Achievements MP" --packAuthors "PABLOzxk" -i src/AchievementsMP.App/Assets/app.ico -o Releases "${notes[@]}"
+          # Versão seguinte só para o teste de atualização abaixo; fica em outra pasta e nunca é enviada.
+          IFS=. read -r major minor patch <<< "${{ steps.version.outputs.version }}"
+          next="$major.$minor.$((patch + 1))-teste"
+          echo "NEXT_VERSION=$next" >> "$GITHUB_ENV"
+          ./.tools/vpk pack -u "$PACK_ID" -v "$next" -p publish -e AchievementsMP.exe \
+            --packTitle "Achievements MP" --packAuthors "PABLOzxk" -i src/AchievementsMP.App/Assets/app.ico -o ReleasesTeste
 
-      - name: Testar a instalação
+      # Como um usuário que já tem dados: instala, atualiza para uma versão nova e desinstala.
+      # Em nenhum momento a pasta de dados (%LocalAppData%\AchievementsMP) pode ser tocada.
+      - name: Testar instalação, atualização e desinstalação
+        if: steps.existing.outputs.skip != 'true'
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $logs = $env:RUNNER_TEMP
+          function Run($exe, [string[]]$arguments, $log) {
+            $p = Start-Process $exe -ArgumentList $arguments -Wait -PassThru
+            if ($p.ExitCode -ne 0) { if (Test-Path $log) { Get-Content $log }; throw "$exe $arguments terminou com código $($p.ExitCode)" }
+          }
+          function StopApp { Get-Process AchievementsMP -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Seconds 2 }
+
+          $data = Join-Path $env:LOCALAPPDATA "AchievementsMP"
+          New-Item -ItemType Directory -Force $data | Out-Null
+          $marker = Join-Path $data "dados-do-usuario.txt"
+          Set-Content $marker "metas e notas" -NoNewline
+
+          # 1. Instalar
           $setup = Get-ChildItem Releases -Filter "*-Setup.exe" | Select-Object -First 1
-          $log = Join-Path $env:RUNNER_TEMP "setup.log"
-          $p = Start-Process $setup.FullName -ArgumentList "--silent", "--log", $log -Wait -PassThru
-          if ($p.ExitCode -ne 0) { Get-Content $log; Write-Error "Setup terminou com código $($p.ExitCode)"; exit 1 }
-          Start-Sleep -Seconds 5
-          Get-Process AchievementsMP -ErrorAction SilentlyContinue | Stop-Process -Force
+          Run $setup.FullName @("--silent", "--log", "$logs\setup.log") "$logs\setup.log"
+          Start-Sleep -Seconds 5; StopApp
           $exe = Get-ChildItem $env:LOCALAPPDATA -Recurse -Depth 3 -Filter AchievementsMP.exe -ErrorAction SilentlyContinue |
             Where-Object { $_.FullName -like "*\current\*" } | Select-Object -First 1
-          if (-not $exe) { Get-Content $log; Write-Error "A instalação não criou AchievementsMP.exe"; exit 1 }
-          Write-Host "Instalado em $($exe.FullName)"
-          # Os dados do usuário ficam em %LocalAppData%\AchievementsMP; a instalação (que o desinstalador apaga) não pode cair lá.
-          if ($exe.FullName -like "$env:LOCALAPPDATA\AchievementsMP\*") { Write-Error "Instalou dentro da pasta de dados do app"; exit 1 }
+          if (-not $exe) { Get-Content "$logs\setup.log"; throw "A instalação não criou AchievementsMP.exe" }
+          $root = Split-Path (Split-Path $exe.FullName)
+          Write-Host "Instalado em $root"
+          if ($root -like "$data\*") { throw "Instalou dentro da pasta de dados do app" }
+          $installed = Get-Content "$root\current\sq.version" -Raw
+          if ($installed -notmatch "<version>${{ steps.version.outputs.version }}</version>") { $installed; throw "Versão instalada errada" }
+
+          # 2. Atualizar, pelo mesmo Update.exe que o app usa
+          $package = Get-ChildItem ReleasesTeste -Filter "*-full.nupkg" | Select-Object -First 1
+          Run "$root\Update.exe" @("--silent", "--log", "$logs\update.log", "apply", "--norestart", "--package", $package.FullName) "$logs\update.log"
+          Start-Sleep -Seconds 3; StopApp
+          $updated = Get-Content "$root\current\sq.version" -Raw
+          if ($updated -notmatch "<version>$env:NEXT_VERSION</version>") { $updated; Get-Content "$logs\update.log"; throw "A atualização não foi aplicada" }
+          Write-Host "Atualizado para $env:NEXT_VERSION"
+
+          # 3. Desinstalar
+          Run "$root\Update.exe" @("--silent", "--log", "$logs\uninstall.log", "uninstall") "$logs\uninstall.log"
+          Start-Sleep -Seconds 5
+          if (Test-Path "$root\current\AchievementsMP.exe") { Get-Content "$logs\uninstall.log"; throw "A desinstalação deixou o app" }
+          Write-Host "Desinstalado"
+
+          if ((Get-Content $marker -Raw) -ne "metas e notas") { throw "Os dados do usuário foram alterados" }
+          Write-Host "Dados do usuário intactos: $((Get-ChildItem $data -Recurse -File).Count) arquivo(s) em $data"
 
       - name: Enviar para as Releases
+        if: steps.existing.outputs.skip != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
