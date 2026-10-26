@@ -27,7 +27,7 @@ public sealed record AchievementItem(
     Rarity Rarity,
     DateTimeOffset? UnlockedAtUtc)
 {
-    /// <summary>Desbloqueada e obtida por menos de 5% dos jogadores: destaque dourado.</summary>
+    /// <summary>Desbloqueada e obtida por menos de 5% dos jogadores: destaque roxo.</summary>
     public bool IsRareUnlock => IsUnlocked && Rarity is Rarity.Rare or Rarity.UltraRare;
 
     public static AchievementItem From(AchievementDetail a)

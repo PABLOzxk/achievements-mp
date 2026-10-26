@@ -65,7 +65,7 @@ public class ViewSmokeTests
         await details.OnNavigatedToAsync();
         Render(new GameDetailsView(), details);
         Assert.True(details.HasGame);
-        // O filtro padrão mostra só as pendentes; com "Todas" as desbloqueadas aparecem com o fundo verde ou dourado.
+        // O filtro padrão mostra só as pendentes; com "Todas" as desbloqueadas aparecem com o fundo verde ou roxo.
         details.Filter = details.FilterOptions.First(o => o.Value == AchievementFilter.All);
         Render(new GameDetailsView(), details);
         Assert.Equal(["Conquista rara"], details.Achievements.Where(a => a.IsRareUnlock).Select(a => a.Name));
