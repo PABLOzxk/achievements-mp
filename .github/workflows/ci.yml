@@ -15,3 +15,13 @@ jobs:
       - run: dotnet restore
       - run: dotnet build --no-restore -c Release
       - run: dotnet test --no-build -c Release --verbosity normal
+        env:
+          # Os testes de interface gravam imagens das telas aqui (ver ViewSmokeTests.Snapshot).
+          AMP_UI_SNAPSHOTS: ${{ github.workspace }}/ui-snapshots
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: telas
+          path: ui-snapshots/
+          if-no-files-found: ignore
+          retention-days: 14

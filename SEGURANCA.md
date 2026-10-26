@@ -7,7 +7,9 @@
   redirecionamentos, para ela não ser levada a outro endereço. Ela nunca vai para mensagens de erro nem para os logs.
 - **Sem chave embutida:** cada pessoa usa a própria chave; o executável não contém segredo nenhum.
 - **Dados vindos do banco ou de um backup:** links de guia só abrem se forem `http`/`https`; ícones só carregam por
-  `https`. Um backup adulterado não consegue fazer o app abrir programas ou acessar pastas de rede.
+  `https`. Um backup adulterado não consegue fazer o app abrir programas ou acessar pastas de rede. A foto de perfil
+  guardada no banco só é aberta se for pequena (até 2 MB e 4096 px de lado), para uma imagem forjada não esgotar a
+  memória a cada abertura do app.
 - **Backup a restaurar:** é conferido antes (formato, integridade, versão) e só troca o banco na abertura seguinte,
   guardando uma cópia dos dados que estavam no app.
 

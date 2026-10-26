@@ -34,75 +34,96 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Navegação lateral -->
-        <DockPanel Grid.Column="0" Grid.Row="0" Background="{StaticResource WindowBrush}">
-            <StackPanel DockPanel.Dock="Top" Margin="20,22,20,24">
-                <TextBlock Text="ACHIEVEMENTS" FontSize="18" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" />
-                <TextBlock Text="MP · painel de conquistas" FontSize="12" Foreground="{StaticResource AccentBrush}" Margin="0,2,0,0" />
-            </StackPanel>
+        <!-- Navegação lateral. Rola só quando a janela é baixa demais para tudo caber; senão o rodapé fica colado embaixo. -->
+        <ScrollViewer Grid.Column="0" Grid.Row="0" Background="{StaticResource WindowBrush}" Focusable="False"
+                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Grid MinHeight="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-            <RadioButton DockPanel.Dock="Bottom" Margin="0,0,0,16" Style="{StaticResource NavItem}"
-                         DataContext="{Binding Settings}"
-                         IsChecked="{Binding IsActive, Mode=OneWay}"
-                         Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                         CommandParameter="{Binding}"
-                         Content="{Binding}" ContentTemplate="{StaticResource NavContent}" />
-
-            <!-- Sincronização -->
-            <Border DockPanel.Dock="Bottom" Margin="16,0,16,12" Padding="12" CornerRadius="4" Background="{StaticResource CardBrush}"
-                    DataContext="{Binding Sync}">
-                <StackPanel>
-                    <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" FontSize="12" MaxHeight="96" TextTrimming="CharacterEllipsis"
-                               ToolTip="{Binding StatusText}">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding LastFailed}" Value="True">
-                                        <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                    <ProgressBar Margin="0,8,0,0" Value="{Binding ProgressPercent, Mode=OneWay}" Maximum="100"
-                                 IsIndeterminate="{Binding IsIndeterminate}"
-                                 Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
-                    <Grid Margin="0,10,0,0">
-                        <Button Content="Sincronizar agora" Command="{Binding SyncNowCommand}" Style="{StaticResource PrimaryButton}" Padding="12,6"
-                                Visibility="{Binding IsRunning, Converter={StaticResource InverseBoolToVisibility}}" />
-                        <Button Content="Cancelar" Command="{Binding CancelCommand}" Padding="12,6"
-                                Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
+                <!-- Perfil: foto e nome da Steam, ou os escolhidos pelo usuário. -->
+                <Button Grid.Row="0" Style="{StaticResource ProfileCard}" Margin="0,14,0,10" DataContext="{Binding Profile}"
+                        Command="{Binding EditCommand}" ToolTip="Trocar foto e nome" AutomationProperties.Name="Editar perfil">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ContentControl Width="44" Height="44" Focusable="False" Content="{Binding}" ContentTemplate="{StaticResource AvatarCircle}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" Margin="12,0,6,0"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="2" Text="&#xE70F;" FontFamily="{StaticResource IconFont}" FontSize="12" VerticalAlignment="Center"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Visibility="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}, Converter={StaticResource BoolToVisibility}}" />
                     </Grid>
-                </StackPanel>
-            </Border>
+                </Button>
 
-            <!-- Atualização baixada e pronta -->
-            <Border DockPanel.Dock="Bottom" Margin="16,0,16,12" Padding="12" CornerRadius="4" Background="{StaticResource CardBrush}"
-                    BorderBrush="{StaticResource SuccessBrush}" BorderThickness="1,0,0,0"
-                    DataContext="{Binding Updater}"
-                    Visibility="{Binding IsUpdateReady, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel>
-                    <TextBlock FontSize="12" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap">
-                        <Run Text="Versão" /> <Run Text="{Binding ReadyVersion, Mode=OneWay}" /> <Run Text="pronta para instalar." />
-                    </TextBlock>
-                    <Button Content="Reiniciar e atualizar" Style="{StaticResource PrimaryButton}" Padding="12,6" Margin="0,8,0,0"
-                            Command="{Binding DataContext.RestartToUpdateCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
-                </StackPanel>
-            </Border>
+                <ItemsControl Grid.Row="1" ItemsSource="{Binding Pages}" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <RadioButton Style="{StaticResource NavItem}"
+                                         IsChecked="{Binding IsActive, Mode=OneWay}"
+                                         Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                         CommandParameter="{Binding}"
+                                         Content="{Binding}" ContentTemplate="{StaticResource NavContent}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
-            <ItemsControl ItemsSource="{Binding Pages}" Focusable="False">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <RadioButton Style="{StaticResource NavItem}"
-                                     IsChecked="{Binding IsActive, Mode=OneWay}"
-                                     Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                     CommandParameter="{Binding}"
-                                     Content="{Binding}" ContentTemplate="{StaticResource NavContent}" />
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </DockPanel>
+                <!-- Atualização baixada e pronta -->
+                <Border Grid.Row="3" Margin="16,0,16,12" Padding="12" CornerRadius="4" Background="{StaticResource CardBrush}"
+                        BorderBrush="{StaticResource SuccessBrush}" BorderThickness="1,0,0,0"
+                        DataContext="{Binding Updater}"
+                        Visibility="{Binding IsUpdateReady, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock FontSize="12" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap">
+                            <Run Text="Versão" /> <Run Text="{Binding ReadyVersion, Mode=OneWay}" /> <Run Text="pronta para instalar." />
+                        </TextBlock>
+                        <Button Content="Reiniciar e atualizar" Style="{StaticResource PrimaryButton}" Padding="12,6" Margin="0,8,0,0"
+                                Command="{Binding DataContext.RestartToUpdateCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Sincronização -->
+                <Border Grid.Row="4" Margin="16,0,16,12" Padding="12" CornerRadius="4" Background="{StaticResource CardBrush}"
+                        DataContext="{Binding Sync}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" FontSize="12" MaxHeight="96" TextTrimming="CharacterEllipsis"
+                                   ToolTip="{Binding StatusText}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding LastFailed}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <ProgressBar Margin="0,8,0,0" Value="{Binding ProgressPercent, Mode=OneWay}" Maximum="100"
+                                     IsIndeterminate="{Binding IsIndeterminate}"
+                                     Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
+                        <Grid Margin="0,10,0,0">
+                            <Button Content="Sincronizar agora" Command="{Binding SyncNowCommand}" Style="{StaticResource PrimaryButton}" Padding="12,6"
+                                    Visibility="{Binding IsRunning, Converter={StaticResource InverseBoolToVisibility}}" />
+                            <Button Content="Cancelar" Command="{Binding CancelCommand}" Padding="12,6"
+                                    Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Image Grid.Row="5" Source="Assets/logo.png" Width="200" Margin="16,4,16,18" HorizontalAlignment="Left"
+                       RenderOptions.BitmapScalingMode="HighQuality" AutomationProperties.Name="Achievements MP: rumo ao 100%" />
+            </Grid>
+        </ScrollViewer>
 
         <!-- Conteúdo -->
         <!-- Cada página cuida da própria rolagem (a biblioteca precisa de virtualização). -->

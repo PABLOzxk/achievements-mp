@@ -100,6 +100,7 @@ public partial class App : Application
         services.AddSingleton<SteamCatalogRepository>();
         services.AddSingleton<PersonalDataRepository>();
         services.AddSingleton<PlannerRepository>();
+        services.AddSingleton<ProfileRepository>();
         services.AddSingleton<GoalTracker>();
         services.AddSingleton<SyncRunRepository>();
         services.AddSingleton<BackupService>();
@@ -120,6 +121,7 @@ public partial class App : Application
             sp.GetRequiredService<SyncRunRepository>(), sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<SyncCoordinator>();
         services.AddSingleton(sp => new SetupChecker(sp.GetRequiredService<ISteamWebApi>()));
+        services.AddSingleton<ProfileRefresher>();
 
         services.AddSingleton(new StatusInfo(paths.Root, schemaVersion, AppVersion));
         services.AddSingleton<OverviewViewModel>();
@@ -129,6 +131,7 @@ public partial class App : Application
         services.AddSingleton<PlannerViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<SetupViewModel>();
+        services.AddSingleton<ProfileViewModel>();
         services.AddSingleton<MainViewModel>();
         return services.BuildServiceProvider();
     }

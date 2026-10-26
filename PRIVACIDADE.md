@@ -10,6 +10,8 @@ usuário, não coleta estatísticas de uso e não envia seus dados para o desenv
 Na pasta `%LocalAppData%\AchievementsMP`:
 
 - o perfil Steam que você informou (link, nome personalizado ou SteamID64);
+- o nome e o endereço da foto do seu perfil na Steam e, se você trocar no app, o nome e a foto que escolheu
+  (a foto é guardada reduzida, a imagem original não é copiada);
 - a sua chave da Steam Web API, cifrada pelo Windows (DPAPI), que só pode ser lida pela sua conta de usuário neste computador;
 - a lista de jogos, conquistas, tempo de jogo e raridade que o app leu da Steam;
 - o que você cria no app: listas, metas, classificações, anotações, checklist e links de guias;
@@ -17,9 +19,9 @@ Na pasta `%LocalAppData%\AchievementsMP`:
 
 ## Com quem o app se comunica
 
-- **Steam** (`api.steampowered.com` e servidores de imagem da Steam): para ler sua biblioteca, suas conquistas e a
-  raridade global. O app envia a sua chave e o seu SteamID, que é o que a Steam exige para responder. O uso dos dados
-  pela Steam segue a política de privacidade da Valve.
+- **Steam** (`api.steampowered.com` e servidores de imagem da Steam): para ler sua biblioteca, suas conquistas, a
+  raridade global e o nome e a foto do seu perfil. O app envia a sua chave e o seu SteamID, que é o que a Steam exige
+  para responder. O uso dos dados pela Steam segue a política de privacidade da Valve.
 - **GitHub** (`github.com` e `api.github.com`): ao abrir, o app consulta se há versão nova e, se houver, baixa a
   atualização. O GitHub vê o endereço IP de quem consulta, como em qualquer acesso ao site.
 - **Links que você abre** (perfil, privacidade, guias) vão para o seu navegador.

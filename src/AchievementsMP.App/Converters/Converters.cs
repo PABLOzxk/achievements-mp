@@ -44,3 +44,12 @@ public sealed class WebImageConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotSupportedException();
 }
+
+/// <summary>Foto de perfil guardada no banco (bytes PNG). Ver <see cref="AchievementsMP.App.Services.AvatarImage"/>.</summary>
+public sealed class AvatarImageConverter : IValueConverter
+{
+    public object? Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        AchievementsMP.App.Services.AvatarImage.Load(value as byte[]);
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotSupportedException();
+}

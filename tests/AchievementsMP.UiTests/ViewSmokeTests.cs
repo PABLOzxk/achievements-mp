@@ -4,8 +4,11 @@ using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using AchievementsMP.App;
+using AchievementsMP.App.Services;
 using AchievementsMP.App.ViewModels;
 using AchievementsMP.App.Views;
 using AchievementsMP.Core.Domain;
@@ -158,6 +161,70 @@ public class ViewSmokeTests
         Assert.NotEmpty(setup.KeyShapeWarning);
         Assert.False(setup.FinishCommand.CanExecute(null));
 
+        // Perfil no topo da barra lateral: começa com o da Steam; foto e nome escolhidos valem sobre ele.
+        Assert.IsType<SettingsViewModel>(main.Pages[^1]); // Configurações agora é item do menu, logo abaixo do planejador
+        Assert.IsType<PlannerViewModel>(main.Pages[^2]);
+        var profiles = services.GetRequiredService<ProfileRepository>();
+        await profiles.SaveSteamAsync("PabloNaSteam", "https://avatars.steamstatic.com/abc_full.jpg");
+        await main.Profile.LoadAsync();
+        Assert.Equal(("PabloNaSteam", "P"), (main.Profile.Name, main.Profile.Initial));
+        Assert.NotNull(main.Profile.SteamAvatarUrl);
+
+        // Foto de celular deitada (EXIF 6 = girar 90° no horário): metade de cima vermelha, de baixo azul.
+        var photo = Path.Combine(paths.Root, "foto.jpg");
+        WriteJpeg(photo, 900, 600, top: Colors.Red, bottom: Colors.Blue, orientation: 6);
+        var shell = services.GetRequiredService<IShell>();
+        var editor = new ProfileEditorViewModel(await profiles.LoadAsync(), profiles, shell);
+        var editorWindow = new ProfileEditorWindow(editor);
+        Render((FrameworkElement)editorWindow.Content, editor);
+        await editor.LoadPhotoAsync(photo);
+        Assert.Equal("", editor.Error);
+        Assert.True(editor.HasCustomAvatar);
+        Assert.Null(editor.SteamAvatarUrl);
+        var stored = AvatarImage.Load(editor.CustomAvatar)!;
+        Assert.Equal((AvatarImage.Size, AvatarImage.Size), (stored.PixelWidth, stored.PixelHeight));
+        // Depois de girada, o vermelho (que era o topo) fica à direita.
+        Assert.True(IsMostly(stored, AvatarImage.Size - 10, AvatarImage.Size / 2, red: true), "a foto não foi girada pela orientação da câmera");
+        Assert.True(IsMostly(stored, 10, AvatarImage.Size / 2, red: false), "a foto não foi girada pela orientação da câmera");
+        editor.Name = "  Pablo  ";
+        Render((FrameworkElement)editorWindow.Content, editor);
+        await editor.SaveCommand.ExecuteAsync(null);
+        Assert.True(editor.Saved);
+        await main.Profile.LoadAsync();
+        Assert.Equal("Pablo", main.Profile.Name);
+        Assert.NotNull(main.Profile.CustomAvatar);
+        Assert.Null(main.Profile.SteamAvatarUrl);
+
+        // Arquivo que não é imagem: mensagem clara, e a foto anterior continua.
+        var notImage = Path.Combine(paths.Root, "nao-e-imagem.png");
+        await File.WriteAllTextAsync(notImage, "isto não é uma imagem");
+        var editor2 = new ProfileEditorViewModel(await profiles.LoadAsync(), profiles, shell);
+        await editor2.LoadPhotoAsync(notImage);
+        Assert.NotEmpty(editor2.Error);
+        Assert.Equal(main.Profile.CustomAvatar, editor2.CustomAvatar);
+        Render((FrameworkElement)new ProfileEditorWindow(editor2).Content, editor2);
+
+        // Voltar para a foto e o nome da Steam.
+        Assert.True(editor2.CanUseSteamName);
+        editor2.UseSteamPhotoCommand.Execute(null);
+        editor2.UseSteamNameCommand.Execute(null);
+        Assert.False(editor2.CanUseSteamName);
+        await editor2.SaveCommand.ExecuteAsync(null);
+        await main.Profile.LoadAsync();
+        Assert.Equal("PabloNaSteam", main.Profile.Name);
+        Assert.Null(main.Profile.CustomAvatar);
+        Assert.Null((await profiles.LoadAsync()).CustomName);
+
+        // A barra lateral inteira (perfil, menu, sincronização, logo), larga e no tamanho mínimo da janela.
+        await profiles.SaveChoicesAsync("Pablo", GradientPng());
+        await main.Profile.LoadAsync();
+        Render((FrameworkElement)window.Content, main);
+        Snapshot((FrameworkElement)window.Content, "janela", new Size(1600, 900));
+        Snapshot((FrameworkElement)window.Content, "janela-minima", new Size(944, 540));
+        var snapshotEditor = new ProfileEditorViewModel(await profiles.LoadAsync(), profiles, shell);
+        var snapshotEditorWindow = new ProfileEditorWindow(snapshotEditor);
+        Snapshot((FrameworkElement)snapshotEditorWindow.Content, "editar-perfil", new Size(464, 420));
+
         // Janela de recuperação de banco danificado (aparece antes da principal, com os mesmos estilos).
         var recovery = new DatabaseRecoveryWindow("file is not a database", paths.Backups);
         Render((FrameworkElement)recovery.Content, new object());
@@ -230,6 +297,72 @@ public class ViewSmokeTests
         view.UpdateLayout();
         // Deixa rodar o que a interface agendou (bindings adiados, carregamentos assíncronos).
         Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle);
+    }
+
+    /// <summary>
+    /// Com AMP_UI_SNAPSHOTS definido (o CI define e publica a pasta), grava a imagem da tela: dá para conferir o visual
+    /// de uma mudança sem instalar o app.
+    /// </summary>
+    private static void Snapshot(FrameworkElement view, string name, Size size)
+    {
+        var folder = Environment.GetEnvironmentVariable("AMP_UI_SNAPSHOTS");
+        if (string.IsNullOrEmpty(folder)) return;
+        // Duas passadas: a altura mínima da barra lateral depende da área visível calculada na primeira.
+        for (var i = 0; i < 2; i++)
+        {
+            view.Measure(size);
+            view.Arrange(new Rect(size));
+            view.UpdateLayout();
+            Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle);
+        }
+        var bitmap = new RenderTargetBitmap((int)size.Width, (int)size.Height, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(view);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        Directory.CreateDirectory(folder);
+        using var file = File.Create(Path.Combine(folder, name + ".png"));
+        encoder.Save(file);
+    }
+
+    private static void WriteJpeg(string path, int width, int height, Color top, Color bottom, ushort orientation)
+    {
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            dc.DrawRectangle(new SolidColorBrush(top), null, new Rect(0, 0, width, height / 2.0));
+            dc.DrawRectangle(new SolidColorBrush(bottom), null, new Rect(0, height / 2.0, width, height / 2.0));
+        }
+        var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(visual);
+        var metadata = new BitmapMetadata("jpg");
+        metadata.SetQuery("/app1/ifd/{ushort=274}", orientation);
+        var encoder = new JpegBitmapEncoder { QualityLevel = 95 };
+        encoder.Frames.Add(BitmapFrame.Create(new FormatConvertedBitmap(bitmap, PixelFormats.Bgr24, null, 0), null, metadata, null));
+        using var file = File.Create(path);
+        encoder.Save(file);
+    }
+
+    private static bool IsMostly(BitmapSource image, int x, int y, bool red)
+    {
+        var pixel = new byte[4];
+        new FormatConvertedBitmap(image, PixelFormats.Bgra32, null, 0).CopyPixels(new Int32Rect(x, y, 1, 1), pixel, 4, 0);
+        var (b, r) = (pixel[0], pixel[2]);
+        return red ? r > 180 && b < 80 : b > 180 && r < 80;
+    }
+
+    /// <summary>Foto de exemplo para as imagens de tela: degradê no lugar de um rosto.</summary>
+    private static byte[] GradientPng()
+    {
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+            dc.DrawRectangle(new LinearGradientBrush(Color.FromRgb(0x47, 0xBF, 0xFF), Color.FromRgb(0xB0, 0x7C, 0xFF), 45), null, new Rect(0, 0, 256, 256));
+        var bitmap = new RenderTargetBitmap(256, 256, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(visual);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using var stream = new MemoryStream();
+        encoder.Save(stream);
+        return stream.ToArray();
     }
 
     /// <summary>WPF exige uma thread STA com Dispatcher; os awaits continuam nela.</summary>
