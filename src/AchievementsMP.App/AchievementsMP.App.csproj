@@ -6,7 +6,7 @@
     <AssemblyName>AchievementsMP</AssemblyName>
     <RootNamespace>AchievementsMP.App</RootNamespace>
     <Product>Achievements MP</Product>
-    <Version>0.8.0</Version>
+    <Version>0.8.1</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <!-- Main próprio (App.xaml.cs): o Velopack precisa rodar antes do WPF na instalação e nas atualizações. -->

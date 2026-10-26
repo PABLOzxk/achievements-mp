@@ -29,13 +29,9 @@
             <ColumnDefinition Width="232" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
 
         <!-- Navegação lateral. Rola só quando a janela é baixa demais para tudo caber; senão o rodapé fica colado embaixo. -->
-        <ScrollViewer Grid.Column="0" Grid.Row="0" Background="{StaticResource WindowBrush}" Focusable="False"
+        <ScrollViewer Grid.Column="0" Background="{StaticResource WindowBrush}" Focusable="False"
                       VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <Grid MinHeight="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
                 <Grid.RowDefinitions>
@@ -133,14 +129,13 @@
 
         <!-- Conteúdo -->
         <!-- Cada página cuida da própria rolagem (a biblioteca precisa de virtualização). -->
-        <Border Grid.Column="1" Grid.Row="0" Background="{StaticResource SurfaceGradientBrush}">
-            <ContentControl Content="{Binding CurrentPage}" Focusable="False" />
-        </Border>
-
-        <!-- Rodapé -->
-        <Border Grid.Row="1" Grid.ColumnSpan="2" Background="{StaticResource WindowBrush}" Padding="20,6"
-                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
-            <TextBlock Text="{Binding Status.Text}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
+        <!-- A versão fica numa faixa própria no canto, sem barra, para nunca cobrir a lista nem a barra de rolagem. -->
+        <Border Grid.Column="1" Background="{StaticResource SurfaceGradientBrush}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status.VersionText}" HorizontalAlignment="Right" Margin="0,2,16,6"
+                           FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                <ContentControl Content="{Binding CurrentPage}" Focusable="False" />
+            </DockPanel>
         </Border>
     </Grid>
 </Window>
