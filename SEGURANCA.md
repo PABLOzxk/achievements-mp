@@ -22,10 +22,10 @@
 
 O app instalado procura versões novas nas Releases de `github.com/PABLOzxk/achievements-mp`. O pacote baixado é
 conferido contra o hash publicado na mesma Release, o que protege contra download corrompido, mas não contra alguém que
-controle a conta do GitHub do projeto. Por isso a conta usa verificação em duas etapas, e as versões são geradas só
-pelo workflow do próprio repositório, que testa instalação, atualização e desinstalação antes de cada envio.
+controle a conta do GitHub do projeto. Por isso essa conta precisa de verificação em duas etapas, e as versões são
+geradas só pelo workflow do próprio repositório, que testa instalação, atualização e desinstalação antes de cada envio.
 
 ## Como relatar um problema de segurança
 
-Use **Security → Report a vulnerability** neste repositório, para o relato ficar privado até haver correção. Não abra
-uma issue pública com os detalhes.
+Use **Security → Report a vulnerability** neste repositório, para o relato ficar privado até haver correção. Se a opção
+não aparecer, abra uma issue pedindo contato, sem os detalhes.
