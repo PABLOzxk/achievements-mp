@@ -34,6 +34,7 @@ Sem instalar: o `AchievementsMP.App-win-Portable.zip` roda de qualquer pasta, ma
 | Planejador de 100%: classificação por conquista, anotações, guias, checklist | |
 | Metas com progresso automático (100%, conquista, N por dia/semana) | |
 | Guia de primeira configuração que confere perfil, chave e privacidade | |
+| Perfil na barra lateral: foto e nome da Steam, que você pode trocar por qualquer imagem e nome | |
 | Backup diário numa pasta escolhida e restauração com conferência | |
 | Instalador e atualização automática pelas Releases do GitHub (Velopack) | |
 | Revisão de segurança ([SEGURANCA.md](SEGURANCA.md)) e recuperação de banco danificado | |

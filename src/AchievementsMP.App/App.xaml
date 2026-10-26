@@ -12,6 +12,36 @@
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
             <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
             <conv:WebImageConverter x:Key="WebImage" />
+            <conv:AvatarImageConverter x:Key="AvatarImage" />
+
+            <!--
+                Foto do perfil em círculo: a escolhida, senão a da Steam, senão a inicial do nome (ou um ícone de pessoa).
+                A da Steam carrega da internet; até chegar (ou sem internet), a inicial aparece por baixo.
+                Escala com o tamanho de quem usa o modelo (barra lateral e janela "Seu perfil").
+            -->
+            <DataTemplate x:Key="AvatarCircle">
+                <Viewbox>
+                    <Grid Width="100" Height="100" TextOptions.TextFormattingMode="Ideal" RenderOptions.BitmapScalingMode="HighQuality">
+                        <Ellipse Fill="{StaticResource AccentDarkBrush}" />
+                        <TextBlock Text="{Binding Initial}" FontSize="46" FontWeight="SemiBold" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Visibility="{Binding HasInitial, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Text="&#xE77B;" FontFamily="{StaticResource IconFont}" FontSize="44" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Visibility="{Binding HasInitial, Converter={StaticResource InverseBoolToVisibility}}" />
+                        <Ellipse>
+                            <Ellipse.Fill>
+                                <ImageBrush ImageSource="{Binding SteamAvatarUrl, Converter={StaticResource WebImage}}" Stretch="UniformToFill" />
+                            </Ellipse.Fill>
+                        </Ellipse>
+                        <Ellipse>
+                            <Ellipse.Fill>
+                                <ImageBrush ImageSource="{Binding CustomAvatar, Converter={StaticResource AvatarImage}}" Stretch="UniformToFill" />
+                            </Ellipse.Fill>
+                        </Ellipse>
+                    </Grid>
+                </Viewbox>
+            </DataTemplate>
 
             <!-- Linha de jogo (biblioteca e visão geral). Clique ou Enter abre os detalhes. -->
             <Style x:Key="GameListItem" TargetType="ListBoxItem">

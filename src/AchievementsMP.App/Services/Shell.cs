@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
+using AchievementsMP.App.ViewModels;
+using AchievementsMP.App.Views;
 using Microsoft.Win32;
 
 namespace AchievementsMP.App.Services;
@@ -9,8 +11,12 @@ public interface IShell
 {
     string? PickFolder(string title, string? initialFolder);
     string? PickBackupFile(string? initialFolder);
+    string? PickImageFile();
     bool Confirm(string message, string title);
     void Inform(string message, string title);
+
+    /// <summary>Abre a janela "Seu perfil". Verdadeiro se o usuário salvou.</summary>
+    bool EditProfile(ProfileEditorViewModel editor);
 
     /// <summary>Abre uma nova instância (que espera esta fechar) e fecha esta. Falso se não deu para reabrir sozinho.</summary>
     bool Restart();
@@ -39,6 +45,25 @@ public sealed class WpfShell : IShell
         if (!string.IsNullOrWhiteSpace(initialFolder) && System.IO.Directory.Exists(initialFolder))
             dialog.InitialDirectory = initialFolder;
         return dialog.ShowDialog(Application.Current.MainWindow) == true ? dialog.FileName : null;
+    }
+
+    public string? PickImageFile()
+    {
+        // Os formatos que o Windows abre sem instalar nada; WebP e HEIC dependem das extensões da Microsoft Store.
+        var dialog = new OpenFileDialog
+        {
+            Title = "Escolha a foto do perfil",
+            Filter = "Imagens|*.png;*.jpg;*.jpeg;*.jfif;*.bmp;*.gif;*.tif;*.tiff;*.ico;*.webp;*.heic;*.heif;*.jxr|Todos os arquivos (*.*)|*.*",
+            CheckFileExists = true,
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
+        };
+        return dialog.ShowDialog(Application.Current.MainWindow) == true ? dialog.FileName : null;
+    }
+
+    public bool EditProfile(ProfileEditorViewModel editor)
+    {
+        new ProfileEditorWindow(editor) { Owner = Application.Current.MainWindow }.ShowDialog();
+        return editor.Saved;
     }
 
     public bool Confirm(string message, string title) =>

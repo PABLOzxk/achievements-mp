@@ -1,0 +1,51 @@
+<Window x:Class="AchievementsMP.App.Views.ProfileEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="clr-namespace:AchievementsMP.App.Converters"
+        Title="Seu perfil" Icon="../Assets/app.ico" Width="480" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{StaticResource WindowBrush}"
+        FontFamily="{StaticResource UiFont}"
+        TextOptions.TextFormattingMode="Display">
+    <Window.Resources>
+        <conv:NotNullToVisibilityConverter x:Key="NotNullToVisibility" />
+    </Window.Resources>
+
+    <StackPanel Margin="28,24,28,24">
+        <TextBlock Text="Seu perfil" Style="{StaticResource PageTitle}" FontSize="22" />
+        <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0"
+                   Text="Aparece no topo da barra lateral. Começa com a foto e o nome da Steam; o que você trocar aqui vale só neste app, a Steam não muda." />
+
+        <Grid Margin="0,20,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <ContentControl Width="96" Height="96" Focusable="False" Content="{Binding}" ContentTemplate="{StaticResource AvatarCircle}" />
+            <StackPanel Grid.Column="1" Margin="20,0,0,0" VerticalAlignment="Center">
+                <Button Content="Trocar foto…" Command="{Binding ChoosePhotoCommand}" HorizontalAlignment="Left" />
+                <Button Style="{StaticResource LinkButton}" Content="{Binding ResetPhotoText}" Command="{Binding UseSteamPhotoCommand}"
+                        FontSize="13" HorizontalAlignment="Left" Margin="0,10,0,0"
+                        Visibility="{Binding HasCustomAvatar, Converter={StaticResource BoolToVisibility}}" />
+                <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="Qualquer imagem serve: ela é cortada no centro, em quadrado." />
+            </StackPanel>
+        </Grid>
+
+        <TextBlock Text="Nome" Style="{StaticResource FieldLabel}" Margin="0,22,0,4" />
+        <TextBox x:Name="NameBox" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Tag="{Binding SteamName}" MaxLength="32" />
+        <DockPanel Margin="0,6,0,0">
+            <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="Usar o nome da Steam" FontSize="12" Margin="12,0,0,0"
+                    VerticalAlignment="Top" Command="{Binding UseSteamNameCommand}"
+                    Visibility="{Binding CanUseSteamName, Converter={StaticResource BoolToVisibility}}" />
+            <TextBlock Style="{StaticResource Hint}" Margin="0" Text="{Binding NameHint}" />
+        </DockPanel>
+
+        <TextBlock Text="{Binding Error}" Foreground="{StaticResource WarningBrush}" FontSize="13" TextWrapping="Wrap" Margin="0,14,0,0"
+                   Visibility="{Binding Error, Converter={StaticResource NotNullToVisibility}}" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
+            <Button Content="Cancelar" IsCancel="True" Margin="0,0,8,0" />
+            <Button Content="Salvar" Style="{StaticResource PrimaryButton}" IsDefault="True" Command="{Binding SaveCommand}" />
+        </StackPanel>
+    </StackPanel>
+</Window>
