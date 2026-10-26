@@ -65,7 +65,10 @@ public class ViewSmokeTests
         await details.OnNavigatedToAsync();
         Render(new GameDetailsView(), details);
         Assert.True(details.HasGame);
-        Assert.Equal(["rara"], details.Achievements.Where(a => a.IsRareUnlock).Select(a => a.Name.Replace("Conquista ", "")));
+        // O filtro padrão mostra só as pendentes; com "Todas" as desbloqueadas aparecem com o fundo verde ou dourado.
+        details.Filter = details.FilterOptions.First(o => o.Value == AchievementFilter.All);
+        Render(new GameDetailsView(), details);
+        Assert.Equal(["Conquista rara"], details.Achievements.Where(a => a.IsRareUnlock).Select(a => a.Name));
         Assert.Contains(details.Achievements, a => a.IsUnlocked && !a.IsRareUnlock);
 
         // Planejador: abre já com uma conquista selecionada, edita, salva e confere que mudou de grupo.
