@@ -68,6 +68,7 @@
     <Style x:Key="BaseButton" TargetType="Button">
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
         <Setter Property="Background" Value="{StaticResource CardHoverBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="Padding" Value="16,8" />
         <Setter Property="Cursor" Value="Hand" />
@@ -76,7 +77,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="3" Padding="{TemplateBinding Padding}"
-                            BorderThickness="1" BorderBrush="Transparent">
+                            BorderThickness="1" BorderBrush="{TemplateBinding BorderBrush}">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -102,6 +103,21 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
         <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <!-- Botão discreto: ação que fica sempre à vista mas não deve chamar atenção (Sincronizar agora). -->
+    <Style x:Key="QuietButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Padding" Value="10,5" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                <Setter Property="Background" Value="#14FFFFFF" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Botão pequeno só com ícone (mover, remover, abrir). -->

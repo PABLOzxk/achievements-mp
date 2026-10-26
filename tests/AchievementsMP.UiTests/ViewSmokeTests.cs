@@ -218,6 +218,7 @@ public class ViewSmokeTests
         // A barra lateral inteira (perfil, menu, sincronização, logo), larga e no tamanho mínimo da janela.
         await profiles.SaveChoicesAsync("Pablo", GradientPng());
         await main.Profile.LoadAsync();
+        main.Sync.StatusText = "Última atualização: 26/10 23:22";
         Render((FrameworkElement)window.Content, main);
         Snapshot((FrameworkElement)window.Content, "janela", new Size(1600, 900));
         Snapshot((FrameworkElement)window.Content, "janela-minima", new Size(944, 540));
