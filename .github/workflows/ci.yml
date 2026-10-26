@@ -18,7 +18,6 @@ jobs:
         env:
           # Os testes de interface gravam imagens das telas aqui (ver ViewSmokeTests.Snapshot).
           AMP_UI_SNAPSHOTS: ${{ github.workspace }}/ui-snapshots
-      # TEMPORÁRIO: imprime as telas no log para conferência remota; sai antes do merge.
       - uses: actions/upload-artifact@v6
         if: always()
         with:
