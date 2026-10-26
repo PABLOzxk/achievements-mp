@@ -98,6 +98,20 @@ public class ViewSmokeTests
         planner.Tasks[0].IsDone = true;
         Render(plannerView, planner);
 
+        // Checklist da conquista: só aparece nela, e a linha do plano mostra a contagem.
+        var gameTaskCount = planner.Tasks.Count;
+        planner.Editor.NewTaskTitle = "Matar o chefe sem dano";
+        await planner.AddAchievementTaskCommand.ExecuteAsync(null);
+        Assert.Equal(["Matar o chefe sem dano"], planner.Editor.Tasks.Select(t => t.Title));
+        Assert.Equal(gameTaskCount, planner.Tasks.Count);
+        planner.Editor.Tasks[0].IsDone = true;
+        Render(plannerView, planner);
+        await planner.MoveTaskToAchievementCommand.ExecuteAsync(planner.Tasks.First(t => !t.IsDone));
+        Assert.Equal(2, planner.Editor.Tasks.Count);
+        Assert.Equal(gameTaskCount - 1, planner.Tasks.Count);
+        Render(plannerView, planner);
+        Assert.Equal("Checklist 1/2", planner.Rows.OfType<PlanAchievementRow>().Single(r => r.ApiName == "rapida").TasksText);
+
         // Aba de metas, com o formulário em cada tipo.
         planner.IsGoalsTab = true;
         await planner.Goals.LoadAsync();

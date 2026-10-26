@@ -52,11 +52,12 @@ public sealed record PlanAchievementRow(
     bool IsHighPriority,
     string? Requirement,
     bool HasNote,
-    string? GuidesText) : PlanRow
+    string? GuidesText,
+    string? TasksText) : PlanRow
 {
     public override bool IsHeader => false;
 
-    public static PlanAchievementRow From(PlanEntry e, int guideCount)
+    public static PlanAchievementRow From(PlanEntry e, int guideCount, (int Done, int Total) tasks)
     {
         var a = e.Achievement;
         var (rarity, rarityText) = AchievementItem.DescribeRarity(a.GlobalPercent);
@@ -69,7 +70,8 @@ public sealed record PlanAchievementRow(
             e.Plan.Priority == Priority.High,
             e.Plan.Requirement is { } r ? $"Requisito: {r}" : null,
             e.Plan.Note is not null,
-            guideCount switch { 0 => null, 1 => "1 guia", _ => $"{guideCount} guias" });
+            guideCount switch { 0 => null, 1 => "1 guia", _ => $"{guideCount} guias" },
+            tasks.Total == 0 ? null : $"Checklist {tasks.Done}/{tasks.Total}");
     }
 }
 
@@ -81,7 +83,7 @@ public sealed record GuideRow(long Id, string Name, Uri Url, string? ApiName)
     public static GuideRow From(Guide g) => new(g.Id, GuideLink.DisplayName(g.Url, g.Title), g.Url, g.ApiName);
 }
 
-/// <summary>Tarefa do checklist. Marcar a caixa grava na hora (com a data).</summary>
+/// <summary>Tarefa do checklist do jogo ou de uma conquista. Marcar a caixa grava na hora (com a data).</summary>
 public sealed class TaskRow : ObservableObject
 {
     private readonly Func<TaskRow, bool, Task> _onToggle;
@@ -90,6 +92,7 @@ public sealed class TaskRow : ObservableObject
     public TaskRow(PlanTask task, Func<TaskRow, bool, Task> onToggle)
     {
         Id = task.Id;
+        ApiName = task.ApiName;
         Title = task.Title;
         DoneText = task.DoneUtc is { } d ? $"feita em {d.ToLocalTime():dd/MM/yyyy}" : null;
         _isDone = task.IsDone;
@@ -97,6 +100,9 @@ public sealed class TaskRow : ObservableObject
     }
 
     public long Id { get; }
+    /// <summary>Conquista dona da tarefa; nulo quando é do jogo inteiro.</summary>
+    public string? ApiName { get; }
+    public bool IsGameTask => ApiName is null;
     public string Title { get; }
     public string? DoneText { get; }
 
@@ -169,6 +175,11 @@ public sealed partial class AchievementEditor : ObservableObject
     [ObservableProperty] private IReadOnlyList<GuideRow> _guides = [];
     [ObservableProperty] private string _newGuideUrl = "";
     [ObservableProperty] private string? _guideError;
+
+    // Checklist desta conquista: grava na hora, como os guias, e não conta como alteração por salvar.
+    [ObservableProperty] private IReadOnlyList<TaskRow> _tasks = [];
+    [ObservableProperty] private string _taskSummary = "";
+    [ObservableProperty] private string _newTaskTitle = "";
 
     public bool IsDirty => ToPlan() != _saved;
 

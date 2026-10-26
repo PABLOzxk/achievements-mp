@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using AchievementsMP.App.Services;
+using AchievementsMP.Core.Domain;
 using AchievementsMP.Core.Library;
 using AchievementsMP.Core.Planning;
 using AchievementsMP.Core.Settings;
@@ -12,7 +13,8 @@ namespace AchievementsMP.App.ViewModels;
 
 /// <summary>
 /// Planejador de 100%: o plano de um jogo (o que falta, na ordem escolhida, com classificação, anotações, guias e
-/// checklist) e a aba de metas. A classificação só vai para o banco ao salvar, ao trocar de conquista ou ao sair da tela.
+/// checklists, o do jogo e o de cada conquista) e a aba de metas. A classificação só vai para o banco ao salvar, ao
+/// trocar de conquista ou ao sair da tela.
 /// </summary>
 public sealed partial class PlannerViewModel : PageViewModel
 {
@@ -52,6 +54,7 @@ public sealed partial class PlannerViewModel : PageViewModel
     private IReadOnlyList<AchievementDetail> _achievements = [];
     private Dictionary<string, AchievementPlan> _plans = new(StringComparer.Ordinal);
     private IReadOnlyList<GuideRow> _guides = [];
+    private IReadOnlyList<PlanTask> _allTasks = [];
 
     [ObservableProperty][NotifyPropertyChangedFor(nameof(IsGameTab))] private bool _isGoalsTab;
 
@@ -170,6 +173,7 @@ public sealed partial class PlannerViewModel : PageViewModel
             HasGame = false;
             Rows = [];
             HasRows = false;
+            _allTasks = [];
             Tasks = [];
             GameGuides = [];
             return;
@@ -193,6 +197,8 @@ public sealed partial class PlannerViewModel : PageViewModel
         if (Game is null) return;
         var plan = PlanBuilder.Build(_achievements, _plans, Strategy?.Value ?? PlanStrategy.Recommended);
         var guideCounts = _guides.Where(g => g.ApiName is not null).GroupBy(g => g.ApiName!).ToDictionary(g => g.Key, g => g.Count());
+        var taskCounts = _allTasks.Where(t => t.ApiName is not null).GroupBy(t => t.ApiName!)
+            .ToDictionary(g => g.Key, g => (Done: g.Count(t => t.IsDone), Total: g.Count()));
 
         var rows = new List<PlanRow>();
         foreach (var group in PlanBuilder.GroupOrder(Strategy?.Value ?? PlanStrategy.Recommended))
@@ -200,7 +206,8 @@ public sealed partial class PlannerViewModel : PageViewModel
             var entries = plan.Entries.Where(e => e.Group == group).ToList();
             if (entries.Count == 0) continue;
             rows.Add(PlanHeaderRow.For(group, entries.Count));
-            rows.AddRange(entries.Select(e => PlanAchievementRow.From(e, guideCounts.GetValueOrDefault(e.Achievement.ApiName))));
+            rows.AddRange(entries.Select(e => PlanAchievementRow.From(
+                e, guideCounts.GetValueOrDefault(e.Achievement.ApiName), taskCounts.GetValueOrDefault(e.Achievement.ApiName))));
         }
         Rows = rows;
         HasRows = rows.Count > 0;
@@ -241,6 +248,7 @@ public sealed partial class PlannerViewModel : PageViewModel
         var previous = Editor;
         var plan = _plans.GetValueOrDefault(row.ApiName) ?? AchievementPlan.Empty(Game!.AppId, row.ApiName);
         Editor = new AchievementEditor(row, plan, _guides.Where(g => g.ApiName == row.ApiName).ToList());
+        ShowTasks(Editor);
         SaveStatus = "";
         if (await SaveIfDirtyAsync(previous))
             RebuildRows();
@@ -374,12 +382,34 @@ public sealed partial class PlannerViewModel : PageViewModel
     }
 
     // ── Checklist ────────────────────────────────────────────────────────────
+    // Cada tarefa é do jogo inteiro (ApiName nulo) ou de uma conquista, e só aparece na lista dela.
 
     private async Task ReloadTasksAsync(long appId)
     {
-        var tasks = await _planner.GetTasksAsync(appId);
-        Tasks = tasks.Select(t => new TaskRow(t, ToggleTaskAsync)).ToList();
-        TaskSummary = tasks.Count == 0 ? "" : $"{tasks.Count(t => t.IsDone)} de {tasks.Count} feitas";
+        _allTasks = await _planner.GetTasksAsync(appId);
+        Tasks = RowsFor(null);
+        TaskSummary = Describe(Tasks);
+        if (Editor is { } editor) ShowTasks(editor);
+    }
+
+    private void ShowTasks(AchievementEditor editor)
+    {
+        editor.Tasks = RowsFor(editor.ApiName);
+        editor.TaskSummary = Describe(editor.Tasks);
+    }
+
+    private IReadOnlyList<TaskRow> RowsFor(string? apiName) =>
+        _allTasks.Where(t => t.ApiName == apiName).Select(t => new TaskRow(t, ToggleTaskAsync)).ToList();
+
+    private static string Describe(IReadOnlyList<TaskRow> tasks) =>
+        tasks.Count == 0 ? "" : $"{tasks.Count(t => t.IsDone)} de {tasks.Count} feitas";
+
+    /// <summary>Recarrega e, se mexeu no checklist de uma conquista, atualiza a contagem que aparece na lista do plano.</summary>
+    private async Task AfterTaskChangeAsync(bool achievementChanged)
+    {
+        if (Game is null) return;
+        await ReloadTasksAsync(Game.AppId);
+        if (achievementChanged) RebuildRows();
     }
 
     private async Task ToggleTaskAsync(TaskRow task, bool done)
@@ -393,7 +423,7 @@ public sealed partial class PlannerViewModel : PageViewModel
         {
             FileLog.Error("Falha ao marcar tarefa", ex);
         }
-        await ReloadTasksAsync(Game.AppId);
+        await AfterTaskChangeAsync(!task.IsGameTask);
     }
 
     [RelayCommand]
@@ -403,7 +433,35 @@ public sealed partial class PlannerViewModel : PageViewModel
         if (Game is null || title.Length == 0) return;
         await _planner.AddTaskAsync(Game.AppId, null, title, _time.GetUtcNow());
         NewTaskTitle = "";
-        await ReloadTasksAsync(Game.AppId);
+        await AfterTaskChangeAsync(false);
+    }
+
+    [RelayCommand]
+    private async Task AddAchievementTaskAsync()
+    {
+        if (Game is null || Editor is not { } editor) return;
+        var title = editor.NewTaskTitle.Trim();
+        if (title.Length == 0) return;
+        await _planner.AddTaskAsync(Game.AppId, editor.ApiName, title, _time.GetUtcNow());
+        editor.NewTaskTitle = "";
+        await AfterTaskChangeAsync(true);
+    }
+
+    /// <summary>Tarefa do jogo inteiro passa para a conquista selecionada (ex.: as criadas antes de existir checklist por conquista).</summary>
+    [RelayCommand]
+    private async Task MoveTaskToAchievementAsync(TaskRow? task)
+    {
+        if (task is null || Game is null || Editor is not { } editor) return;
+        await _planner.MoveTaskToAsync(task.Id, editor.ApiName);
+        await AfterTaskChangeAsync(true);
+    }
+
+    [RelayCommand]
+    private async Task MoveTaskToGameAsync(TaskRow? task)
+    {
+        if (task is null || Game is null) return;
+        await _planner.MoveTaskToAsync(task.Id, null);
+        await AfterTaskChangeAsync(true);
     }
 
     [RelayCommand]
@@ -411,7 +469,7 @@ public sealed partial class PlannerViewModel : PageViewModel
     {
         if (task is null || Game is null) return;
         await _planner.DeleteTaskAsync(task.Id);
-        await ReloadTasksAsync(Game.AppId);
+        await AfterTaskChangeAsync(!task.IsGameTask);
     }
 
     [RelayCommand]
@@ -419,7 +477,7 @@ public sealed partial class PlannerViewModel : PageViewModel
     {
         if (task is null || Game is null) return;
         await _planner.MoveTaskAsync(task.Id, -1);
-        await ReloadTasksAsync(Game.AppId);
+        await AfterTaskChangeAsync(false);
     }
 
     [RelayCommand]
@@ -427,7 +485,7 @@ public sealed partial class PlannerViewModel : PageViewModel
     {
         if (task is null || Game is null) return;
         await _planner.MoveTaskAsync(task.Id, +1);
-        await ReloadTasksAsync(Game.AppId);
+        await AfterTaskChangeAsync(false);
     }
 
     // ── Navegação ────────────────────────────────────────────────────────────
