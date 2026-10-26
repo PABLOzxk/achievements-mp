@@ -27,6 +27,9 @@ public sealed record AchievementItem(
     Rarity Rarity,
     DateTimeOffset? UnlockedAtUtc)
 {
+    /// <summary>Desbloqueada e obtida por menos de 5% dos jogadores: destaque dourado.</summary>
+    public bool IsRareUnlock => IsUnlocked && Rarity is Rarity.Rare or Rarity.UltraRare;
+
     public static AchievementItem From(AchievementDetail a)
     {
         var unlocked = a.State == UnlockState.Unlocked;
@@ -130,7 +133,8 @@ public sealed partial class GameDetailsViewModel(SteamCatalogRepository catalog)
             : "";
 
         var pending = _all.Count(a => !a.IsUnlocked && !a.IsUnknown);
-        CountsText = $"{_all.Count(a => a.IsUnlocked)} desbloqueadas · {pending} pendentes";
+        var rare = _all.Count(a => a.IsRareUnlock);
+        CountsText = $"{_all.Count(a => a.IsUnlocked)} desbloqueadas" + (rare > 0 ? $" ({rare} {(rare == 1 ? "rara" : "raras")})" : "") + $" · {pending} pendentes";
         Sort ??= SortOptions[0];
         if (Filter is null)
             Filter = pending > 0 ? FilterOptions[1] : FilterOptions[0];

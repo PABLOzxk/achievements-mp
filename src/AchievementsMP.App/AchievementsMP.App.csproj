@@ -6,7 +6,7 @@
     <AssemblyName>AchievementsMP</AssemblyName>
     <RootNamespace>AchievementsMP.App</RootNamespace>
     <Product>Achievements MP</Product>
-    <Version>0.4.0</Version>
+    <Version>0.4.1</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>

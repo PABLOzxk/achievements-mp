@@ -46,6 +46,9 @@
                                     <DataTrigger Binding="{Binding IsUnlocked}" Value="True">
                                         <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
                                     </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsRareUnlock}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource GoldBrush}" />
+                                    </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </TextBlock.Style>
@@ -112,7 +115,13 @@
         <WrapPanel Grid.Row="1" Margin="0,20,16,8" Visibility="{Binding HasGame, Converter={StaticResource BoolToVisibility}}">
             <ComboBox Width="170" Margin="0,0,10,8" ItemsSource="{Binding FilterOptions}" SelectedItem="{Binding Filter}" DisplayMemberPath="Label" />
             <ComboBox Width="240" Margin="0,0,10,8" ItemsSource="{Binding SortOptions}" SelectedItem="{Binding Sort}" DisplayMemberPath="Label" />
-            <TextBlock Text="{Binding CountsText}" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="4,0,0,8" />
+            <TextBlock Text="{Binding CountsText}" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="4,0,16,8" />
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,8">
+                <Border Width="10" Height="10" CornerRadius="2" Background="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="desbloqueada" Style="{StaticResource Hint}" Margin="6,0,14,0" VerticalAlignment="Center" />
+                <Border Width="10" Height="10" CornerRadius="2" Background="{StaticResource GoldBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="rara: menos de 5% dos jogadores têm" Style="{StaticResource Hint}" Margin="6,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
         </WrapPanel>
 
         <!-- Conquistas -->
@@ -130,13 +139,27 @@
                     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                     <Setter Property="Template">
                         <Setter.Value>
+                            <!-- Desbloqueada = fundo verde; desbloqueada e rara (< 5%) = dourado. O hover clareia sem apagar a cor. -->
                             <ControlTemplate TargetType="ListBoxItem">
-                                <Border x:Name="Bd" Background="{StaticResource CardBrush}" Margin="0,0,0,2" Padding="12,0" CornerRadius="2">
-                                    <ContentPresenter />
+                                <Border Background="{StaticResource CardBrush}" Margin="0,0,0,2" CornerRadius="2" ClipToBounds="True">
+                                    <Grid>
+                                        <Border x:Name="Tint" Background="Transparent" />
+                                        <Border x:Name="Accent" Width="3" HorizontalAlignment="Left" Background="Transparent" />
+                                        <Border x:Name="Hover" Background="#14FFFFFF" Visibility="Hidden" />
+                                        <ContentPresenter Margin="12,0" />
+                                    </Grid>
                                 </Border>
                                 <ControlTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding IsUnlocked}" Value="True">
+                                        <Setter TargetName="Tint" Property="Background" Value="{StaticResource UnlockedRowBrush}" />
+                                        <Setter TargetName="Accent" Property="Background" Value="{StaticResource SuccessBrush}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsRareUnlock}" Value="True">
+                                        <Setter TargetName="Tint" Property="Background" Value="{StaticResource RareRowBrush}" />
+                                        <Setter TargetName="Accent" Property="Background" Value="{StaticResource GoldBrush}" />
+                                    </DataTrigger>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="{StaticResource CardHoverBrush}" />
+                                        <Setter TargetName="Hover" Property="Visibility" Value="Visible" />
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>

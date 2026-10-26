@@ -16,6 +16,7 @@
     <Color x:Key="SuccessColor">#FFA4D007</Color>
     <Color x:Key="WarningColor">#FFE8B339</Color>
     <Color x:Key="DangerColor">#FFE0523D</Color>
+    <Color x:Key="GoldColor">#FFF2C14E</Color>
 
     <SolidColorBrush x:Key="WindowBrush" Color="{StaticResource WindowColor}" />
     <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}" />
@@ -31,6 +32,17 @@
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" />
+    <SolidColorBrush x:Key="GoldBrush" Color="{StaticResource GoldColor}" />
+
+    <!-- Fundo das conquistas desbloqueadas nos detalhes do jogo: verde, e dourado nas raras. Mais forte à esquerda. -->
+    <LinearGradientBrush x:Key="UnlockedRowBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Offset="0" Color="#40A4D007" />
+        <GradientStop Offset="1" Color="#14A4D007" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="RareRowBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Offset="0" Color="#55F2C14E" />
+        <GradientStop Offset="1" Color="#1AF2C14E" />
+    </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="SurfaceGradientBrush" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Offset="0" Color="#FF1B2838" />

@@ -65,6 +65,8 @@ public class ViewSmokeTests
         await details.OnNavigatedToAsync();
         Render(new GameDetailsView(), details);
         Assert.True(details.HasGame);
+        Assert.Equal(["rara"], details.Achievements.Where(a => a.IsRareUnlock).Select(a => a.Name.Replace("Conquista ", "")));
+        Assert.Contains(details.Achievements, a => a.IsUnlocked && !a.IsRareUnlock);
 
         // Planejador: abre já com uma conquista selecionada, edita, salva e confere que mudou de grupo.
         var planner = services.GetRequiredService<PlannerViewModel>();
@@ -126,12 +128,15 @@ public class ViewSmokeTests
         await steam.UpsertLibraryAsync(
             [new Game(Hades, "Hades", null, 336, T0, true), new Game(Portal, "Portal 2", null, 600, T0.AddDays(-30), true)], T0, isCompleteLibrary: true);
 
-        string[] hades = ["feita", "perdivel", "rapida", "longa", "semclasse", "alta"];
+        string[] hades = ["feita", "rara", "perdivel", "rapida", "longa", "semclasse", "alta"];
+        string[] unlocked = ["feita", "rara"];
         await steam.UpsertSchemaAsync(Hades, hades.Select(a => new AchievementDefinition(Hades, a, $"Conquista {a}", $"Descrição de {a}", a == "semclasse", null, null)).ToList(), T0);
         await steam.ApplyPlayerStatesAsync(Hades,
-            hades.Select(a => new PlayerAchievementState(Hades, a, a == "feita" ? UnlockState.Unlocked : UnlockState.Locked, a == "feita" ? T0 : null)).ToList(), T0);
+            hades.Select(a => unlocked.Contains(a)
+                ? new PlayerAchievementState(Hades, a, UnlockState.Unlocked, T0)
+                : new PlayerAchievementState(Hades, a, UnlockState.Locked, null)).ToList(), T0);
         await steam.UpsertGlobalPercentagesAsync(Hades,
-            new Dictionary<string, double> { ["feita"] = 81.8, ["perdivel"] = 12.5, ["rapida"] = 55.0, ["longa"] = 5.9, ["semclasse"] = 0.4 }, T0);
+            new Dictionary<string, double> { ["feita"] = 81.8, ["rara"] = 2.1, ["perdivel"] = 12.5, ["rapida"] = 55.0, ["longa"] = 5.9, ["semclasse"] = 0.4 }, T0);
 
         await steam.UpsertSchemaAsync(Portal, [new AchievementDefinition(Portal, "bolo", "O bolo", null, false, null, null)], T0);
         await steam.ApplyPlayerStatesAsync(Portal, [new PlayerAchievementState(Portal, "bolo", UnlockState.Unlocked, T0)], T0);
