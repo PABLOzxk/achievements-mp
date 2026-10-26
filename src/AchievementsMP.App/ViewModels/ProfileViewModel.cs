@@ -57,7 +57,7 @@ public sealed partial class ProfileEditorViewModel(UserProfile current, ProfileR
     public string? SteamName => current.SteamName;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanUseSteamName), nameof(Initial))]
+    [NotifyPropertyChangedFor(nameof(CanUseSteamName), nameof(Initial), nameof(HasInitial))]
     private string _name = current.Name ?? "";
 
     [ObservableProperty]
@@ -73,6 +73,7 @@ public sealed partial class ProfileEditorViewModel(UserProfile current, ProfileR
     public bool HasCustomAvatar => CustomAvatar is not null;
     public string? SteamAvatarUrl => CustomAvatar is null ? current.SteamAvatarUrl : null;
     public string Initial => Name.FirstOrDefault(char.IsLetterOrDigit) is var c and not '\0' ? char.ToUpperInvariant(c).ToString() : "";
+    public bool HasInitial => Initial.Length > 0;
 
     public string ResetPhotoText => current.SteamAvatarUrl is null ? "Remover foto" : "Usar a foto da Steam";
     public bool CanUseSteamName => SteamName is not null && Name.Trim() != SteamName;
