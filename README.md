@@ -21,7 +21,7 @@ Sem instalar: o `AchievementsMP.App-win-Portable.zip` roda de qualquer pasta, ma
   `%LocalAppData%\AchievementsMP`. Apague essa pasta se quiser remover tudo.
 - **Privacidade:** veja [PRIVACIDADE.md](PRIVACIDADE.md). Não há servidor do app nem telemetria.
 
-## Estado atual: Fase 5 (validação e distribuição)
+## Estado atual: as 5 fases do plano concluídas
 
 | Pronto | Ainda não |
 | --- | --- |
@@ -36,6 +36,8 @@ Sem instalar: o `AchievementsMP.App-win-Portable.zip` roda de qualquer pasta, ma
 | Guia de primeira configuração que confere perfil, chave e privacidade | |
 | Backup diário numa pasta escolhida e restauração com conferência | |
 | Instalador e atualização automática pelas Releases do GitHub (Velopack) | |
+| Revisão de segurança ([SEGURANCA.md](SEGURANCA.md)) e recuperação de banco danificado | |
+| Teste de instalar, atualizar e desinstalar sem perder dados a cada versão | |
 | Testes xUnit + teste de fumaça das telas no Windows, CI no Windows | |
 
 ## Planejador de 100%
@@ -146,3 +148,7 @@ Veja também [SEGURANCA.md](SEGURANCA.md).
 - O perfil **e** a opção "Detalhes do jogo" precisam estar **públicos**, senão a Steam devolve a biblioteca vazia e recusa as conquistas.
 - A API oficial **não informa** se uma conquista é perdível, difícil ou rápida. Esses dados são marcados por você no planejador (com a fonte), e o padrão é "desconhecido".
 - `GetGlobalAchievementPercentagesForApp` não exige chave; os demais exigem.
+
+## Licença
+
+[MIT](LICENSE). Use, modifique e redistribua à vontade, mantendo o aviso de copyright.
