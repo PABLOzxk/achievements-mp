@@ -264,6 +264,8 @@ Generated_Code/
 # because we have git ;-)
 _UpgradeReport_Files/
 Backup*/
+# ...mas não o código do backup do app.
+!src/AchievementsMP.Data/Backups/
 UpgradeLog*.XML
 UpgradeLog*.htm
 ServiceFabricBackup/

@@ -47,6 +47,48 @@
                 </StackPanel>
             </Border>
     
+            <!-- Backup: a única cópia dos dados pessoais fora deste arquivo. -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="BACKUP" Style="{StaticResource SectionTitle}" />
+                    <TextBlock Style="{StaticResource Body}" TextWrapping="Wrap"
+                               Text="Classificações, notas, metas, checklist e listas só existem neste computador; a Steam não guarda nada disso. Escolha uma pasta do OneDrive, Google Drive ou um pendrive para ter uma cópia fora do PC." />
+                    <DockPanel Margin="0,14,0,0">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="Escolher pasta" Command="{Binding ChooseBackupFolderCommand}" />
+                            <Button Content="Desligar" Margin="8,0,0,0" Command="{Binding DisableBackupCommand}"
+                                    Visibility="{Binding IsBackupOn, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,0,12,0">
+                            <TextBlock Text="Pasta do backup automático" Style="{StaticResource FieldLabel}" />
+                            <TextBlock Text="{Binding BackupFolderText}" Style="{StaticResource Body}" TextTrimming="CharacterEllipsis" ToolTip="{Binding BackupFolder}" />
+                        </StackPanel>
+                    </DockPanel>
+                    <TextBlock Text="{Binding LastBackupText}" Style="{StaticResource Hint}" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,0"
+                               Text="Um backup por dia, feito ao abrir ou fechar o app. A chave da Steam vai junto, mas criptografada: só abre na sua conta deste Windows." />
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Content="Fazer backup agora" Command="{Binding BackupNowCommand}" />
+                        <Button Content="Restaurar um backup…" Margin="10,0,0,0" Command="{Binding RestoreBackupCommand}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding BackupStatus}" Margin="0,10,0,0" TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource Body}">
+                                <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsBackupError}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding BackupStatus}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
             <!-- Dados -->
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <DockPanel>
@@ -54,7 +96,7 @@
                     <StackPanel>
                         <TextBlock Text="DADOS LOCAIS" Style="{StaticResource SectionTitle}" />
                         <TextBlock Text="{Binding DataFolder}" Style="{StaticResource Body}" />
-                        <TextBlock Style="{StaticResource Hint}" Text="Banco SQLite, backups automáticos antes de cada atualização de esquema e logs." />
+                        <TextBlock Style="{StaticResource Hint}" Text="Banco SQLite, cópias feitas antes de cada atualização do banco e logs. Ficam neste PC: não substituem o backup acima." />
                     </StackPanel>
                 </DockPanel>
             </Border>

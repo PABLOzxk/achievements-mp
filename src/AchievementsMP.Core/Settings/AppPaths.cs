@@ -7,6 +7,9 @@ public sealed record AppPaths(string Root)
     public string Backups => Path.Combine(Root, "backups");
     public string Logs => Path.Combine(Root, "logs");
 
+    /// <summary>Backup escolhido para restaurar; é aplicado na próxima abertura, antes de o banco ser aberto.</summary>
+    public string PendingRestore => Path.Combine(Root, "restore-pending.db");
+
     public static AppPaths ForCurrentUser() =>
         new(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AchievementsMP"));
 

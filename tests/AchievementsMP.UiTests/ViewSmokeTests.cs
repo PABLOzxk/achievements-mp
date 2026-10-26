@@ -12,6 +12,7 @@ using AchievementsMP.Core.Domain;
 using AchievementsMP.Core.Planning;
 using AchievementsMP.Core.Settings;
 using AchievementsMP.Data;
+using AchievementsMP.Data.Backups;
 using AchievementsMP.Data.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -42,7 +43,7 @@ public class ViewSmokeTests
         app.InitializeComponent();
 
         var paths = new AppPaths(Path.Combine(Path.GetTempPath(), "amp-ui-tests", Guid.NewGuid().ToString("N")));
-        var (factory, migration) = await AppDatabase.InitializeAsync(paths);
+        var (factory, migration, _) = await AppDatabase.InitializeAsync(paths);
         await SeedAsync(factory);
         using var services = AchievementsMP.App.App.ConfigureServices(paths, factory, migration.ToVersion);
 
@@ -114,9 +115,23 @@ public class ViewSmokeTests
         planner.Goals.ShowFinished = true;
         Render(plannerView, planner);
 
+        var backupFolder = Path.Combine(paths.Root, "OneDrive");
+        var store = services.GetRequiredService<ISettingsStore>();
+        await store.SaveAsync((await store.LoadAsync()) with { BackupFolder = backupFolder });
+
         var settings = services.GetRequiredService<SettingsViewModel>();
         await settings.OnNavigatedToAsync();
         Render(new SettingsView(), settings);
+        Assert.True(settings.IsBackupOn);
+        await settings.BackupNowCommand.ExecuteAsync(null);
+        Assert.False(settings.IsBackupError, settings.BackupStatus);
+        Render(new SettingsView(), settings);
+        Assert.Single(BackupService.List(backupFolder));
+        Assert.StartsWith("Último backup", settings.LastBackupText);
+
+        // Fechar o app: com backup do dia já feito, não cria outro.
+        await main.BeforeExitAsync();
+        Assert.Single(BackupService.List(backupFolder));
 
         GC.KeepAlive(window); // construída só para validar o XAML; fechar encerraria o app de teste
         Assert.True(bindingErrors.Errors.Count == 0, "Erros de binding:\n" + string.Join("\n", bindingErrors.Errors));

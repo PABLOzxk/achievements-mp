@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Http;
 using System.Reflection;
 using System.Windows;
@@ -6,6 +7,7 @@ using AchievementsMP.App.Services;
 using AchievementsMP.App.ViewModels;
 using AchievementsMP.Core.Settings;
 using AchievementsMP.Data;
+using AchievementsMP.Data.Backups;
 using AchievementsMP.Data.Migrations;
 using AchievementsMP.Data.Planning;
 using AchievementsMP.Data.Repositories;
@@ -18,6 +20,9 @@ namespace AchievementsMP.App;
 
 public partial class App : Application
 {
+    /// <summary>Passado pela instância que reinicia o app: a nova espera a antiga fechar antes de abrir o banco.</summary>
+    internal const string WaitForPidArgument = "--wait-pid";
+
     private ServiceProvider? _services;
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -34,9 +39,11 @@ public partial class App : Application
             FileLog.Initialize(paths.Logs);
             FileLog.Info("Iniciando.");
 
-            var (factory, migration) = await AppDatabase.InitializeAsync(paths);
+            await WaitForPreviousInstanceAsync(e.Args);
+            var (factory, migration, restore) = await AppDatabase.InitializeAsync(paths);
             if (migration.BackupPath is not null)
                 FileLog.Info($"Banco migrado de v{migration.FromVersion} para v{migration.ToVersion}. Backup: {migration.BackupPath}");
+            ReportRestore(restore);
 
             _services = ConfigureServices(paths, factory, migration.ToVersion);
             var window = new MainWindow { DataContext = _services.GetRequiredService<MainViewModel>() };
@@ -68,6 +75,9 @@ public partial class App : Application
         services.AddSingleton<PlannerRepository>();
         services.AddSingleton<GoalTracker>();
         services.AddSingleton<SyncRunRepository>();
+        services.AddSingleton<BackupService>();
+        services.AddSingleton<AutoBackup>();
+        services.AddSingleton<IShell, WpfShell>();
 
         services.AddSingleton<ISteamWebApi>(sp =>
         {
@@ -95,6 +105,43 @@ public partial class App : Application
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<MainViewModel>();
         return services.BuildServiceProvider();
+    }
+
+    private static Task WaitForPreviousInstanceAsync(string[] args)
+    {
+        var i = Array.IndexOf(args, WaitForPidArgument);
+        if (i < 0 || i + 1 >= args.Length || !int.TryParse(args[i + 1], out var pid))
+            return Task.CompletedTask;
+        return Task.Run(() =>
+        {
+            try
+            {
+                using var previous = Process.GetProcessById(pid);
+                previous.WaitForExit(TimeSpan.FromSeconds(30));
+            }
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+            {
+                // Já fechou.
+            }
+        });
+    }
+
+    private static void ReportRestore(RestoreOutcome? restore)
+    {
+        if (restore is null) return;
+        if (restore.Restored)
+        {
+            FileLog.Info($"Backup restaurado. Cópia dos dados anteriores: {restore.SafetyCopyPath}");
+            MessageBox.Show("Backup restaurado." + (restore.SafetyCopyPath is { } copy
+                    ? $"\n\nOs dados que estavam no app antes ficaram guardados em:\n{copy}" : ""),
+                "Achievements MP", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+            FileLog.Error($"Restauração cancelada: {restore.Error}");
+            MessageBox.Show($"Não foi possível restaurar o backup. Seus dados atuais não foram alterados.\n\n{restore.Error}",
+                "Achievements MP", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private static string AppVersion =>

@@ -1,7 +1,9 @@
 using System.Diagnostics;
+using System.IO;
 using AchievementsMP.App.Services;
 using AchievementsMP.Core.Domain;
 using AchievementsMP.Core.Settings;
+using AchievementsMP.Data.Backups;
 using AchievementsMP.Steam;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -14,7 +16,9 @@ public sealed record LanguageOption(string Code, string Label)
     public override string ToString() => Label;
 }
 
-public sealed partial class SettingsViewModel(ISettingsStore store, ISecretStore secrets, ISteamWebApi steam, AppPaths paths) : PageViewModel
+public sealed partial class SettingsViewModel(
+    ISettingsStore store, ISecretStore secrets, ISteamWebApi steam, AppPaths paths,
+    BackupService backups, AutoBackup autoBackup, IShell shell, TimeProvider time) : PageViewModel
 {
     public override string Title => "Configurações";
     public override string Glyph => "";
@@ -45,6 +49,17 @@ public sealed partial class SettingsViewModel(ISettingsStore store, ISecretStore
 
     private ulong? _resolvedSteamId;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsBackupOn), nameof(BackupFolderText))]
+    private string? _backupFolder;
+
+    [ObservableProperty] private string _lastBackupText = "";
+    [ObservableProperty] private string _backupStatus = "";
+    [ObservableProperty] private bool _isBackupError;
+
+    public bool IsBackupOn => !string.IsNullOrWhiteSpace(BackupFolder);
+    public string BackupFolderText => IsBackupOn ? BackupFolder! : "Desligado. Escolha uma pasta para ligar.";
+
     public string ProfileHint => SteamIdentity.Parse(SteamProfile) switch
     {
         SteamProfileInput.SteamId id => $"SteamID64 {id.Value}",
@@ -63,6 +78,10 @@ public sealed partial class SettingsViewModel(ISettingsStore store, ISecretStore
         SyncIntervalHours = Math.Max(1, s.SyncIntervalMinutes / 60).ToString();
         await RefreshKeyStatusAsync();
         StatusMessage = "";
+        BackupFolder = s.BackupFolder;
+        BackupStatus = autoBackup.LastError is { } error ? $"O último backup automático falhou: {error}" : "";
+        IsBackupError = autoBackup.LastError is not null;
+        RefreshLastBackup();
     }
 
     [RelayCommand]
@@ -165,6 +184,141 @@ public sealed partial class SettingsViewModel(ISettingsStore store, ISecretStore
         {
             IsBusy = false;
         }
+    }
+
+    /// <summary>Liga o backup automático na pasta escolhida. Só grava a escolha se o primeiro backup lá der certo.</summary>
+    [RelayCommand]
+    private async Task ChooseBackupFolderAsync()
+    {
+        var folder = shell.PickFolder("Pasta para o backup automático (ex.: dentro do OneDrive ou Google Drive)", BackupFolder);
+        if (folder is null) return;
+        if (IsInsideDataFolder(folder))
+        {
+            ShowBackupResult("Escolha uma pasta fora da pasta de dados do app: um backup no mesmo lugar não protege contra perder o PC.", error: true);
+            return;
+        }
+        if (await BackupNowCoreAsync(folder))
+        {
+            var previous = await store.LoadAsync();
+            await store.SaveAsync(previous with { BackupFolder = folder });
+            BackupFolder = folder;
+        }
+    }
+
+    [RelayCommand]
+    private async Task DisableBackupAsync()
+    {
+        var previous = await store.LoadAsync();
+        await store.SaveAsync(previous with { BackupFolder = null });
+        BackupFolder = null;
+        ShowBackupResult("Backup automático desligado. Os backups que já estavam na pasta continuam lá.", error: false);
+        RefreshLastBackup();
+    }
+
+    [RelayCommand]
+    private async Task BackupNowAsync()
+    {
+        if (!IsBackupOn)
+        {
+            await ChooseBackupFolderAsync();
+            return;
+        }
+        await BackupNowCoreAsync(BackupFolder!);
+    }
+
+    private async Task<bool> BackupNowCoreAsync(string folder)
+    {
+        IsBusy = true;
+        try
+        {
+            var made = await Task.Run(() => backups.CreateAsync(folder, time.GetUtcNow()));
+            FileLog.Info($"Backup manual: {made.Path}");
+            ShowBackupResult($"Backup feito: {Path.GetFileName(made.Path)}", error: false);
+            RefreshLastBackup(folder);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Microsoft.Data.Sqlite.SqliteException)
+        {
+            FileLog.Error("Falha no backup manual", ex);
+            ShowBackupResult($"Não foi possível gravar o backup nessa pasta: {ex.Message}", error: true);
+            return false;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    /// <summary>Confere o arquivo, mostra o que tem dentro e, se o usuário confirmar, reinicia o app para trocar os dados.</summary>
+    [RelayCommand]
+    private async Task RestoreBackupAsync()
+    {
+        var file = shell.PickBackupFile(BackupFolder);
+        if (file is null) return;
+
+        BackupSummary summary;
+        try
+        {
+            summary = await Task.Run(() => BackupService.InspectAsync(file));
+        }
+        catch (InvalidBackupException ex)
+        {
+            ShowBackupResult(ex.Message, error: true);
+            return;
+        }
+
+        var when = BackupService.List(Path.GetDirectoryName(file)!).FirstOrDefault(b => b.Path == file)?.CreatedUtc
+                   ?? File.GetLastWriteTimeUtc(file);
+        var message =
+            $"Restaurar o backup de {when.ToLocalTime():dd/MM/yyyy 'às' HH:mm}?\n\n" +
+            $"Ele tem {summary.Games} jogos, {summary.Plans} conquistas classificadas, {summary.Notes} notas, {summary.Goals} metas, " +
+            $"{summary.Tasks} tarefas, {summary.Guides} guias e {summary.Lists} listas.\n\n" +
+            "Tudo o que está no app agora será trocado por esse backup. Antes disso, uma cópia dos dados atuais fica guardada em:\n" +
+            $"{paths.Backups}\n\n" +
+            "Se o backup veio de outro computador, você vai precisar colar a chave da Steam de novo.\n\n" +
+            "O app vai reiniciar para concluir.";
+        if (!shell.Confirm(message, "Restaurar backup")) return;
+
+        try
+        {
+            await Task.Run(() => backups.StageRestoreAsync(file));
+        }
+        catch (Exception ex) when (ex is InvalidBackupException or IOException or UnauthorizedAccessException)
+        {
+            ShowBackupResult($"Não foi possível preparar a restauração: {ex.Message}", error: true);
+            return;
+        }
+
+        FileLog.Info($"Restauração agendada a partir de {file}");
+        if (!shell.Restart())
+            shell.Inform("Feche e abra o app para concluir a restauração.", "Restaurar backup");
+    }
+
+    private void ShowBackupResult(string message, bool error)
+    {
+        BackupStatus = message;
+        IsBackupError = error;
+    }
+
+    private void RefreshLastBackup(string? folder = null)
+    {
+        folder ??= BackupFolder;
+        if (string.IsNullOrWhiteSpace(folder))
+        {
+            LastBackupText = "Sem backup automático, seus dados pessoais existem só neste computador.";
+            return;
+        }
+        var all = BackupService.List(folder);
+        LastBackupText = all.Count == 0
+            ? "Nenhum backup nesta pasta ainda."
+            : $"Último backup: {all[0].CreatedUtc.ToLocalTime():dd/MM/yyyy 'às' HH:mm} · {all.Count} guardado(s), ficam os {BackupService.KeepCount} mais recentes.";
+    }
+
+    private bool IsInsideDataFolder(string folder)
+    {
+        var root = Path.GetFullPath(paths.Root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var chosen = Path.GetFullPath(folder).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        return chosen.StartsWith(root, StringComparison.OrdinalIgnoreCase);
     }
 
     [RelayCommand]

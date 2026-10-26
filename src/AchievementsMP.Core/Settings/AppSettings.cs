@@ -22,5 +22,8 @@ public sealed record AppSettings
     /// <summary>Ordem do planejador de 100%.</summary>
     public PlanStrategy PlanStrategy { get; init; } = PlanStrategy.Recommended;
 
+    /// <summary>Pasta do backup automático diário (ex.: dentro do OneDrive). Nula = backup automático desligado.</summary>
+    public string? BackupFolder { get; init; }
+
     public static readonly AppSettings Default = new();
 }

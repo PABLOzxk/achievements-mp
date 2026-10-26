@@ -13,22 +13,23 @@ public partial class MainWindow : Window
         SourceInitialized += (_, _) => DarkTitleBar.Apply(this);
     }
 
-    private bool _flushed;
+    private bool _readyToClose;
 
-    // Fechar a janela no meio de uma edição do planejador: grava antes de sair.
+    // Fechar a janela: grava edições pendentes e faz o backup do dia antes de sair.
     protected override async void OnClosing(CancelEventArgs e)
     {
         base.OnClosing(e);
-        if (_flushed || e.Cancel || DataContext is not MainViewModel { HasPendingEdits: true } vm) return;
+        if (_readyToClose || e.Cancel || DataContext is not MainViewModel vm) return;
         e.Cancel = true;
-        _flushed = true;
+        _readyToClose = true;
+        IsEnabled = false;
         try
         {
-            await vm.FlushAsync();
+            await vm.BeforeExitAsync();
         }
         catch (Exception ex)
         {
-            FileLog.Error("Falha ao gravar edições pendentes ao fechar", ex);
+            FileLog.Error("Falha ao preparar o fechamento", ex);
         }
         Close();
     }
