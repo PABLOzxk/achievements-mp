@@ -13,7 +13,19 @@ public sealed partial class AppUpdater : ObservableObject
 {
     public const string RepositoryUrl = "https://github.com/PABLOzxk/achievements-mp";
 
-    private readonly UpdateManager _manager = new(new GithubSource(RepositoryUrl, accessToken: null, prerelease: false));
+    // Criado só quando usado: fora do app instalado (testes, "dotnet run") o Velopack não está inicializado.
+    private readonly Lazy<UpdateManager?> _manager = new(() =>
+    {
+        try
+        {
+            return new UpdateManager(new GithubSource(RepositoryUrl, accessToken: null, prerelease: false));
+        }
+        catch (InvalidOperationException ex)
+        {
+            FileLog.Info($"Atualizador indisponível: {ex.Message}");
+            return null;
+        }
+    });
     private UpdateInfo? _ready;
 
     [ObservableProperty] private bool _isUpdateReady;
@@ -21,12 +33,12 @@ public sealed partial class AppUpdater : ObservableObject
     [ObservableProperty] private string _readyVersion = "";
     [ObservableProperty] private string _statusText = "";
 
-    public bool IsInstalled => _manager.IsInstalled;
+    public bool IsInstalled => _manager.Value?.IsInstalled == true;
 
     public async Task CheckAsync(bool userAsked)
     {
         if (IsChecking || IsUpdateReady) return;
-        if (!_manager.IsInstalled)
+        if (_manager.Value is not { IsInstalled: true } manager)
         {
             StatusText = "Esta cópia não foi instalada pelo instalador, então não se atualiza sozinha. Baixe a versão nova na página do GitHub.";
             return;
@@ -36,16 +48,16 @@ public sealed partial class AppUpdater : ObservableObject
         try
         {
             if (userAsked) StatusText = "Procurando atualizações…";
-            var update = await _manager.CheckForUpdatesAsync();
+            var update = await manager.CheckForUpdatesAsync();
             if (update is null)
             {
-                StatusText = $"Você está na versão mais recente ({_manager.CurrentVersion}).";
+                StatusText = $"Você está na versão mais recente ({manager.CurrentVersion}).";
                 return;
             }
 
             var version = update.TargetFullRelease.Version.ToString();
             StatusText = $"Baixando a versão {version}…";
-            await _manager.DownloadUpdatesAsync(update, p => StatusText = $"Baixando a versão {version}… {p}%");
+            await manager.DownloadUpdatesAsync(update, p => StatusText = $"Baixando a versão {version}… {p}%");
             _ready = update;
             ReadyVersion = version;
             IsUpdateReady = true;
@@ -67,8 +79,8 @@ public sealed partial class AppUpdater : ObservableObject
     /// <summary>Troca pela versão baixada e reabre. Chame só depois de gravar o que estiver pendente.</summary>
     public void ApplyAndRestart()
     {
-        if (_ready is null) return;
+        if (_ready is null || _manager.Value is not { } manager) return;
         FileLog.Info($"Aplicando atualização {ReadyVersion}.");
-        _manager.ApplyUpdatesAndRestart(_ready.TargetFullRelease);
+        manager.ApplyUpdatesAndRestart(_ready.TargetFullRelease);
     }
 }

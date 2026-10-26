@@ -123,6 +123,9 @@ public class ViewSmokeTests
         await settings.OnNavigatedToAsync();
         Render(new SettingsView(), settings);
         Assert.True(settings.IsBackupOn);
+        Assert.False(settings.Updater.IsInstalled);
+        await settings.CheckUpdatesCommand.ExecuteAsync(null);
+        Assert.Contains("não foi instalada", settings.Updater.StatusText);
         await settings.BackupNowCommand.ExecuteAsync(null);
         Assert.False(settings.IsBackupError, settings.BackupStatus);
         Render(new SettingsView(), settings);
