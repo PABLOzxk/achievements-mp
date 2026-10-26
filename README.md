@@ -47,8 +47,10 @@ A Steam não diz se uma conquista é perdível, rápida ou demorada. No planejad
 
 - **Ordem do plano** (configurável): perdíveis → rápidas → sem classificação → demoradas; ou rápidas primeiro; ou só
   pela raridade. Dentro de cada grupo: prioridade alta primeiro, depois da mais comum para a mais rara.
-- **Por conquista:** perdível (sim / não / não sei), esforço, prioridade, requisito especial, fonte, anotação e links de guia.
-- **Por jogo:** checklist de tarefas próprias (com data de conclusão e ordem) e links de guias.
+- **Por conquista:** perdível (sim / não / não sei), esforço, prioridade, requisito especial, fonte, anotação, links de guia
+  e checklist próprio, que só aparece com a conquista selecionada (a linha do plano mostra "Checklist 1/3").
+- **Por jogo:** checklist do jogo inteiro e links de guias. Uma tarefa passa do jogo para a conquista selecionada
+  (e de volta) com um clique; tarefas criadas antes da 0.7.0 ficam no checklist do jogo.
 - **Metas:** 100% num jogo, uma conquista, N conquistas (no total até um prazo, por dia ou por semana) ou meta livre.
   O progresso vem das datas de desbloqueio da Steam. Sem dados da Steam a meta fica "sem dados", nunca "falhou".
   Metas de 100% e de conquista se concluem sozinhas e continuam concluídas mesmo se um DLC trouxer conquistas novas.

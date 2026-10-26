@@ -108,6 +108,38 @@ public class PlannerRepositoryTests
     }
 
     [Fact]
+    public async Task Achievement_tasks_have_their_own_order_and_can_change_owner()
+    {
+        await using var db = await TempDatabase.CreateMigratedAsync();
+        var repo = new PlannerRepository(db.Factory);
+        var game1 = await repo.AddTaskAsync(Hades, null, "jogo 1", T0);
+        var x1 = await repo.AddTaskAsync(Hades, "x", "x 1", T0);
+        var game2 = await repo.AddTaskAsync(Hades, null, "jogo 2", T0);
+        var x2 = await repo.AddTaskAsync(Hades, "x", "x 2", T0);
+        await repo.AddTaskAsync(Hades, "y", "y 1", T0);
+
+        async Task<string[]> Titles(string? apiName) =>
+            (await repo.GetTasksAsync(Hades)).Where(t => t.ApiName == apiName).Select(t => t.Title).ToArray();
+
+        // Subir "jogo 2" troca com "jogo 1", não com "x 1", que está entre os dois no banco.
+        await repo.MoveTaskAsync(game2, -1);
+        Assert.Equal(["jogo 2", "jogo 1"], await Titles(null));
+        await repo.MoveTaskAsync(x1, -1);         // já é a primeira da conquista: nada muda
+        await repo.MoveTaskAsync(x1, +1);
+        Assert.Equal(["x 2", "x 1"], await Titles("x"));
+        Assert.Equal(["y 1"], await Titles("y"));
+
+        // Uma tarefa antiga do jogo passa para a conquista e vai para o fim da lista dela; e volta.
+        await repo.MoveTaskToAsync(game1, "x");
+        Assert.Equal(["jogo 2"], await Titles(null));
+        Assert.Equal(["x 2", "x 1", "jogo 1"], await Titles("x"));
+        await repo.MoveTaskToAsync(x2, null);
+        Assert.Equal(["jogo 2", "x 2"], await Titles(null));
+        Assert.Equal(["x 1", "jogo 1"], await Titles("x"));
+        Assert.Equal(5, await repo.CountTasksAsync(Hades));
+    }
+
+    [Fact]
     public async Task Goals_round_trip_and_change_status()
     {
         await using var db = await TempDatabase.CreateMigratedAsync();

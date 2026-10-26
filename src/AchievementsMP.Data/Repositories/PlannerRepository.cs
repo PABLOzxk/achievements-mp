@@ -168,8 +168,9 @@ public sealed class PlannerRepository(SqliteConnectionFactory factory)
         await c.ExecuteAsync(new CommandDefinition("DELETE FROM guides WHERE id = @id", new { id }, cancellationToken: ct));
     }
 
-    // ── Tarefas (checklist pessoal por jogo) ────────────────────────────────
+    // ── Tarefas (checklist do jogo ou de uma conquista) ─────────────────────
 
+    /// <summary>Tarefas do jogo: as do jogo inteiro (api_name nulo) e as de cada conquista.</summary>
     public async Task<IReadOnlyList<PlanTask>> GetTasksAsync(long appId, CancellationToken ct = default)
     {
         await using var c = await factory.OpenAsync(ct);
@@ -199,6 +200,17 @@ public sealed class PlannerRepository(SqliteConnectionFactory factory)
             "UPDATE plan_tasks SET done_utc = @done WHERE id = @id", new { id, done = Time.ToUnix(doneUtc) }, cancellationToken: ct));
     }
 
+    /// <summary>Passa a tarefa para uma conquista (ou, com nulo, para o jogo inteiro). Ela vai para o fim da lista nova.</summary>
+    public async Task MoveTaskToAsync(long id, string? apiName, CancellationToken ct = default)
+    {
+        await using var c = await factory.OpenAsync(ct);
+        await c.ExecuteAsync(new CommandDefinition("""
+            UPDATE plan_tasks
+            SET api_name = @apiName, sort_order = (SELECT MAX(t.sort_order) + 1 FROM plan_tasks t WHERE t.app_id = plan_tasks.app_id)
+            WHERE id = @id
+            """, new { id, apiName }, cancellationToken: ct));
+    }
+
     public async Task RenameTaskAsync(long id, string title, CancellationToken ct = default)
     {
         await using var c = await factory.OpenAsync(ct);
@@ -212,19 +224,23 @@ public sealed class PlannerRepository(SqliteConnectionFactory factory)
         await c.ExecuteAsync(new CommandDefinition("DELETE FROM plan_tasks WHERE id = @id", new { id }, cancellationToken: ct));
     }
 
-    /// <summary>Troca a tarefa de lugar com a vizinha de cima (-1) ou de baixo (+1). Nas pontas, não faz nada.</summary>
+    /// <summary>
+    /// Troca a tarefa de lugar com a vizinha de cima (-1) ou de baixo (+1) da mesma lista (a do jogo ou a da mesma conquista).
+    /// Nas pontas, não faz nada.
+    /// </summary>
     public async Task MoveTaskAsync(long id, int direction, CancellationToken ct = default)
     {
         await using var c = await factory.OpenAsync(ct);
         await using var tx = await c.BeginTransactionAsync(ct);
         var task = await c.QueryFirstOrDefaultAsync<TaskPosition>(new CommandDefinition(
-            "SELECT id AS Id, app_id AS AppId, sort_order AS SortOrder FROM plan_tasks WHERE id = @id", new { id }, tx, cancellationToken: ct));
+            "SELECT id AS Id, app_id AS AppId, api_name AS ApiName, sort_order AS SortOrder FROM plan_tasks WHERE id = @id", new { id }, tx, cancellationToken: ct));
         if (task is not { } t) return;
 
+        // "IS" também compara nulo com nulo: as tarefas do jogo inteiro formam uma lista própria.
         var n = await c.QueryFirstOrDefaultAsync<TaskPosition>(new CommandDefinition(direction < 0
-                ? "SELECT id AS Id, app_id AS AppId, sort_order AS SortOrder FROM plan_tasks WHERE app_id = @AppId AND (sort_order < @SortOrder OR (sort_order = @SortOrder AND id < @Id)) ORDER BY sort_order DESC, id DESC LIMIT 1"
-                : "SELECT id AS Id, app_id AS AppId, sort_order AS SortOrder FROM plan_tasks WHERE app_id = @AppId AND (sort_order > @SortOrder OR (sort_order = @SortOrder AND id > @Id)) ORDER BY sort_order, id LIMIT 1",
-            new { t.AppId, t.SortOrder, t.Id }, tx, cancellationToken: ct));
+                ? "SELECT id AS Id, app_id AS AppId, api_name AS ApiName, sort_order AS SortOrder FROM plan_tasks WHERE app_id = @AppId AND api_name IS @ApiName AND (sort_order < @SortOrder OR (sort_order = @SortOrder AND id < @Id)) ORDER BY sort_order DESC, id DESC LIMIT 1"
+                : "SELECT id AS Id, app_id AS AppId, api_name AS ApiName, sort_order AS SortOrder FROM plan_tasks WHERE app_id = @AppId AND api_name IS @ApiName AND (sort_order > @SortOrder OR (sort_order = @SortOrder AND id > @Id)) ORDER BY sort_order, id LIMIT 1",
+            new { t.AppId, t.ApiName, t.SortOrder, t.Id }, tx, cancellationToken: ct));
         if (n is null) return;
 
         // Ordem empatada (dados antigos): separa antes de trocar.
@@ -334,6 +350,7 @@ public sealed class PlannerRepository(SqliteConnectionFactory factory)
     {
         public long Id { get; init; }
         public long AppId { get; init; }
+        public string? ApiName { get; init; }
         public long SortOrder { get; init; }
     }
 

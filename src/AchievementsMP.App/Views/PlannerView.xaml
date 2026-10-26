@@ -69,6 +69,9 @@
                         <Border Style="{StaticResource NeutralChip}" Visibility="{Binding GuidesText, Converter={StaticResource NotNullToVisibility}}">
                             <TextBlock Text="{Binding GuidesText}" Style="{StaticResource ChipText}" />
                         </Border>
+                        <Border Style="{StaticResource NeutralChip}" Visibility="{Binding TasksText, Converter={StaticResource NotNullToVisibility}}">
+                            <TextBlock Text="{Binding TasksText}" Style="{StaticResource ChipText}" />
+                        </Border>
                     </WrapPanel>
                 </StackPanel>
                 <Border Grid.Column="2" Style="{StaticResource RarityChip}" VerticalAlignment="Center">
@@ -89,6 +92,60 @@
                         <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" MaxWidth="260" />
                     </StackPanel>
                 </Button>
+            </DockPanel>
+        </DataTemplate>
+
+        <!-- Tarefa de checklist (do jogo ou da conquista). Os comandos são do planejador, não do editor. -->
+        <DataTemplate x:Key="TaskRowTemplate">
+            <DockPanel Margin="0,3">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <!-- Do jogo para a conquista selecionada: só aparece com uma conquista aberta. -->
+                    <Button Content="&#xE8DE;" ToolTip="Passar para a conquista selecionada"
+                            Command="{Binding DataContext.MoveTaskToAchievementCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsGameTask}" Value="True" />
+                                            <Condition Binding="{Binding DataContext.HasEditor, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button Style="{StaticResource IconButton}" Content="&#xE8DE;" ToolTip="Passar para o checklist do jogo"
+                            Visibility="{Binding IsGameTask, Converter={StaticResource InverseBoolToVisibility}}"
+                            Command="{Binding DataContext.MoveTaskToGameCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                    <Button Style="{StaticResource IconButton}" Content="&#xE70E;" ToolTip="Subir"
+                            Command="{Binding DataContext.MoveTaskUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                    <Button Style="{StaticResource IconButton}" Content="&#xE70D;" ToolTip="Descer"
+                            Command="{Binding DataContext.MoveTaskDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                    <Button Style="{StaticResource IconButton}" Content="&#xE711;" ToolTip="Excluir tarefa"
+                            Command="{Binding DataContext.DeleteTaskCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                </StackPanel>
+                <CheckBox IsChecked="{Binding IsDone, Mode=TwoWay}" VerticalAlignment="Center">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Title}" TextWrapping="Wrap" FontSize="13">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsDone}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+                                            <Setter Property="TextDecorations" Value="Strikethrough" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Text="{Binding DoneText}" FontSize="11" Foreground="{StaticResource TextMutedBrush}"
+                                   Visibility="{Binding DoneText, Converter={StaticResource NotNullToVisibility}}" />
+                    </StackPanel>
+                </CheckBox>
             </DockPanel>
         </DataTemplate>
     </UserControl.Resources>
@@ -221,7 +278,7 @@
                     </ListBox.ItemContainerStyle>
                 </ListBox>
 
-                <!-- Painel da direita: classificação, checklist e guias do jogo -->
+                <!-- Painel da direita: classificação e checklist da conquista, checklist e guias do jogo -->
                 <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0">
                     <StackPanel Margin="0,0,0,24">
                         <Border Style="{StaticResource Card}" Visibility="{Binding HasEditor, Converter={StaticResource InverseBoolToVisibility}}">
@@ -287,48 +344,38 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Checklist -->
+                        <!-- Checklist da conquista selecionada -->
+                        <Border Style="{StaticResource Card}" Margin="0,12,0,0" Visibility="{Binding HasEditor, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel DataContext="{Binding Editor}">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding TaskSummary}" Style="{StaticResource Hint}" Margin="0" />
+                                    <TextBlock Text="CHECKLIST DA CONQUISTA" Style="{StaticResource SectionTitle}" />
+                                </DockPanel>
+                                <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}"
+                                           TextTrimming="CharacterEllipsis" Margin="0,0,0,4" />
+                                <ItemsControl ItemsSource="{Binding Tasks}" ItemTemplate="{StaticResource TaskRowTemplate}" />
+                                <DockPanel Margin="0,8,0,0">
+                                    <Button DockPanel.Dock="Right" Content="Adicionar" Padding="10,6" Margin="8,0,0,0"
+                                            Command="{Binding DataContext.AddAchievementTaskCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                    <TextBox Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}" Tag="Passo desta conquista (ex.: pegar a chave no capítulo 2)">
+                                        <TextBox.InputBindings>
+                                            <KeyBinding Key="Enter" Command="{Binding DataContext.AddAchievementTaskCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                        </TextBox.InputBindings>
+                                    </TextBox>
+                                </DockPanel>
+                                <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
+                                           Text="Só aparece com esta conquista selecionada. Grava na hora, sem precisar de Salvar." />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Checklist do jogo inteiro -->
                         <Border Style="{StaticResource Card}" Margin="0,12,0,0">
                             <StackPanel>
                                 <DockPanel>
                                     <TextBlock DockPanel.Dock="Right" Text="{Binding TaskSummary}" Style="{StaticResource Hint}" Margin="0" />
                                     <TextBlock Text="CHECKLIST DO JOGO" Style="{StaticResource SectionTitle}" />
                                 </DockPanel>
-                                <ItemsControl ItemsSource="{Binding Tasks}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <DockPanel Margin="0,3">
-                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                                    <Button Style="{StaticResource IconButton}" Content="&#xE70E;" ToolTip="Subir"
-                                                            Command="{Binding DataContext.MoveTaskUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
-                                                    <Button Style="{StaticResource IconButton}" Content="&#xE70D;" ToolTip="Descer"
-                                                            Command="{Binding DataContext.MoveTaskDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
-                                                    <Button Style="{StaticResource IconButton}" Content="&#xE711;" ToolTip="Excluir tarefa"
-                                                            Command="{Binding DataContext.DeleteTaskCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
-                                                </StackPanel>
-                                                <CheckBox IsChecked="{Binding IsDone, Mode=TwoWay}" VerticalAlignment="Center">
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding Title}" TextWrapping="Wrap" FontSize="13">
-                                                            <TextBlock.Style>
-                                                                <Style TargetType="TextBlock">
-                                                                    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsDone}" Value="True">
-                                                                            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
-                                                                            <Setter Property="TextDecorations" Value="Strikethrough" />
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </TextBlock.Style>
-                                                        </TextBlock>
-                                                        <TextBlock Text="{Binding DoneText}" FontSize="11" Foreground="{StaticResource TextMutedBrush}"
-                                                                   Visibility="{Binding DoneText, Converter={StaticResource NotNullToVisibility}}" />
-                                                    </StackPanel>
-                                                </CheckBox>
-                                            </DockPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                                <ItemsControl ItemsSource="{Binding Tasks}" ItemTemplate="{StaticResource TaskRowTemplate}" />
                                 <DockPanel Margin="0,8,0,0">
                                     <Button DockPanel.Dock="Right" Content="Adicionar" Command="{Binding AddTaskCommand}" Padding="10,6" Margin="8,0,0,0" />
                                     <TextBox Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}" Tag="Nova tarefa (ex.: farmar ouro antes do capítulo 3)">
@@ -337,6 +384,8 @@
                                         </TextBox.InputBindings>
                                     </TextBox>
                                 </DockPanel>
+                                <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
+                                           Text="Vale para o jogo todo. Para uma conquista só, selecione-a na lista e use o checklist dela." />
                             </StackPanel>
                         </Border>
 
