@@ -129,6 +129,18 @@ public class ViewSmokeTests
         Assert.Single(BackupService.List(backupFolder));
         Assert.StartsWith("Último backup", settings.LastBackupText);
 
+        // Guia de primeira configuração, com os três estados de passo (sem chamar a Steam de verdade).
+        var setup = services.GetRequiredService<SetupViewModel>();
+        await setup.OnNavigatedToAsync();
+        var setupView = new SetupView();
+        Render(setupView, setup);
+        setup.ProfileStep.Set(AchievementsMP.Sync.CheckState.Ok, "Encontrei o perfil de Fulano.");
+        setup.KeyStep.Set(AchievementsMP.Sync.CheckState.Problem, "A Steam recusou a chave.");
+        setup.NewApiKey = "curta-demais";
+        Render(setupView, setup);
+        Assert.NotEmpty(setup.KeyShapeWarning);
+        Assert.False(setup.FinishCommand.CanExecute(null));
+
         // Fechar o app: com backup do dia já feito, não cria outro.
         await main.BeforeExitAsync();
         Assert.Single(BackupService.List(backupFolder));

@@ -24,6 +24,7 @@ internal sealed class FakeSteam : ISteamWebApi
     public Dictionary<long, Dictionary<string, double>> Global { get; } = new();
     public ConcurrentDictionary<string, ConcurrentQueue<SteamError>> Failures { get; } = new();
     public ConcurrentQueue<string> Calls { get; } = new();
+    public bool ProfilePublic { get; set; } = true;
 
     /// <summary>Executado antes de cada chamada; útil para cancelar no meio.</summary>
     public Action<string>? OnCall { get; set; }
@@ -58,7 +59,7 @@ internal sealed class FakeSteam : ISteamWebApi
             ? SteamResult<ulong>.Ok(id) : SteamResult<ulong>.Fail(SteamErrorKind.NotFound, "não achou")));
 
     public Task<SteamResult<PlayerSummary>> GetPlayerSummaryAsync(ulong steamId, CancellationToken ct = default) =>
-        Task.FromResult(Respond("summary", () => SteamResult<PlayerSummary>.Ok(new PlayerSummary(steamId, "fake", null, true))));
+        Task.FromResult(Respond("summary", () => SteamResult<PlayerSummary>.Ok(new PlayerSummary(steamId, "fake", null, ProfilePublic))));
 
     public Task<SteamResult<OwnedGames>> GetOwnedGamesAsync(ulong steamId, CancellationToken ct = default) =>
         Task.FromResult(Respond("owned", () => SteamResult<OwnedGames>.Ok(new OwnedGames(Library.Count, Library.ToList()))));

@@ -78,6 +78,7 @@ public partial class App : Application
         services.AddSingleton<BackupService>();
         services.AddSingleton<AutoBackup>();
         services.AddSingleton<IShell, WpfShell>();
+        services.AddSingleton<BackupActions>();
 
         services.AddSingleton<ISteamWebApi>(sp =>
         {
@@ -95,6 +96,7 @@ public partial class App : Application
             sp.GetRequiredService<ISteamWebApi>(), sp.GetRequiredService<ISettingsStore>(), sp.GetRequiredService<SteamCatalogRepository>(),
             sp.GetRequiredService<SyncRunRepository>(), sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<SyncCoordinator>();
+        services.AddSingleton(sp => new SetupChecker(sp.GetRequiredService<ISteamWebApi>()));
 
         services.AddSingleton(new StatusInfo(paths.Root, schemaVersion, AppVersion));
         services.AddSingleton<OverviewViewModel>();
@@ -103,6 +105,7 @@ public partial class App : Application
         services.AddSingleton<GoalsViewModel>();
         services.AddSingleton<PlannerViewModel>();
         services.AddSingleton<SettingsViewModel>();
+        services.AddSingleton<SetupViewModel>();
         services.AddSingleton<MainViewModel>();
         return services.BuildServiceProvider();
     }

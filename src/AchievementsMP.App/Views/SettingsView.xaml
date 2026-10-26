@@ -9,7 +9,10 @@
             <!-- Conta Steam -->
             <Border Style="{StaticResource Card}" Margin="0,24,0,0">
                 <StackPanel>
-                    <TextBlock Text="PERFIL STEAM" Style="{StaticResource SectionTitle}" />
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="Abrir guia passo a passo" Command="{Binding OpenSetupGuideCommand}" VerticalAlignment="Top" />
+                        <TextBlock Text="PERFIL STEAM" Style="{StaticResource SectionTitle}" />
+                    </DockPanel>
                     <TextBox Text="{Binding SteamProfile, UpdateSourceTrigger=PropertyChanged}" />
                     <TextBlock Text="{Binding ProfileHint}" Style="{StaticResource Hint}" />
     

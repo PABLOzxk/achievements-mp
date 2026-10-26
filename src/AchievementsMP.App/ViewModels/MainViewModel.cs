@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using AchievementsMP.App.Services;
+using AchievementsMP.Core.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -8,9 +9,12 @@ namespace AchievementsMP.App.ViewModels;
 public sealed partial class MainViewModel : ObservableObject
 {
     public MainViewModel(OverviewViewModel overview, LibraryViewModel library, GameDetailsViewModel details, PlannerViewModel planner, SettingsViewModel settings,
-        SyncCoordinator sync, StatusInfo status, AutoBackup backup)
+        SetupViewModel setup, SyncCoordinator sync, StatusInfo status, AutoBackup backup, ISettingsStore settingsStore, ISecretStore secrets)
     {
         _backup = backup;
+        _setup = setup;
+        _settingsStore = settingsStore;
+        _secrets = secrets;
         Pages = [overview, library, details, planner];
         Settings = settings;
         Sync = sync;
@@ -20,7 +24,8 @@ public sealed partial class MainViewModel : ObservableObject
             if (CurrentPage is OverviewViewModel or LibraryViewModel or GameDetailsViewModel)
                 _ = LoadAsync(CurrentPage);
         };
-        overview.NavigateToSettings = () => Navigate(settings);
+        overview.NavigateToSettings = settings.NavigateToSetup = () => Show(setup);
+        setup.NavigateToOverview = () => Show(overview);
         overview.NavigateToGame = library.NavigateToGame = planner.NavigateToGame = appId =>
         {
             details.Show(appId);
@@ -48,6 +53,9 @@ public sealed partial class MainViewModel : ObservableObject
 
     private readonly PlannerViewModel _planner;
     private readonly AutoBackup _backup;
+    private readonly SetupViewModel _setup;
+    private readonly ISettingsStore _settingsStore;
+    private readonly ISecretStore _secrets;
 
     public ObservableCollection<PageViewModel> Pages { get; }
     public SettingsViewModel Settings { get; }
@@ -96,7 +104,11 @@ public sealed partial class MainViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
-        await LoadAsync(CurrentPage);
+        // Primeira vez (sem perfil e sem chave): abre direto o guia em vez da visão geral vazia.
+        if (string.IsNullOrWhiteSpace((await _settingsStore.LoadAsync()).SteamProfile) && string.IsNullOrEmpty(await _secrets.GetSteamApiKeyAsync()))
+            CurrentPage = _setup;
+        else
+            await LoadAsync(CurrentPage);
         _ = _backup.RunIfDueAsync();
         try
         {

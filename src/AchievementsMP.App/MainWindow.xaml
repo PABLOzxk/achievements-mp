@@ -14,6 +14,7 @@
         <DataTemplate DataType="{x:Type vm:GameDetailsViewModel}"><views:GameDetailsView /></DataTemplate>
         <DataTemplate DataType="{x:Type vm:PlannerViewModel}"><views:PlannerView /></DataTemplate>
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}"><views:SettingsView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SetupViewModel}"><views:SetupView /></DataTemplate>
 
         <DataTemplate x:Key="NavContent">
             <StackPanel Orientation="Horizontal">

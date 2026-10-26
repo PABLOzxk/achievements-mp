@@ -42,6 +42,9 @@ public static partial class SteamIdentity
         return VanityName().IsMatch(text) ? new SteamProfileInput.Vanity(text) : null;
     }
 
+    /// <summary>A chave da Steam Web API tem 32 caracteres hexadecimais. Serve só para avisar de cópia incompleta.</summary>
+    public static bool LooksLikeApiKey(string? key) => key is not null && ApiKey().IsMatch(key.Trim());
+
     private static SteamProfileInput? ParseId(string digits) =>
         ulong.TryParse(digits, out var id) && IsValidSteamId64(id) ? new SteamProfileInput.SteamId(id) : null;
 
@@ -53,4 +56,7 @@ public static partial class SteamIdentity
 
     [GeneratedRegex(@"^[A-Za-z0-9_-]{2,32}$")]
     private static partial Regex VanityName();
+
+    [GeneratedRegex(@"^[0-9A-Fa-f]{32}$")]
+    private static partial Regex ApiKey();
 }

@@ -18,7 +18,7 @@ public sealed record LanguageOption(string Code, string Label)
 
 public sealed partial class SettingsViewModel(
     ISettingsStore store, ISecretStore secrets, ISteamWebApi steam, AppPaths paths,
-    BackupService backups, AutoBackup autoBackup, IShell shell, TimeProvider time) : PageViewModel
+    BackupService backups, BackupActions backupActions, AutoBackup autoBackup, IShell shell) : PageViewModel
 {
     public override string Title => "Configurações";
     public override string Glyph => "";
@@ -32,6 +32,11 @@ public sealed partial class SettingsViewModel(
     ];
 
     public string DataFolder => paths.Root;
+
+    internal Action? NavigateToSetup { get; set; }
+
+    [RelayCommand]
+    private void OpenSetupGuide() => NavigateToSetup?.Invoke();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ProfileHint))]
@@ -186,30 +191,21 @@ public sealed partial class SettingsViewModel(
         }
     }
 
-    /// <summary>Liga o backup automático na pasta escolhida. Só grava a escolha se o primeiro backup lá der certo.</summary>
     [RelayCommand]
     private async Task ChooseBackupFolderAsync()
     {
-        var folder = shell.PickFolder("Pasta para o backup automático (ex.: dentro do OneDrive ou Google Drive)", BackupFolder);
-        if (folder is null) return;
-        if (IsInsideDataFolder(folder))
-        {
-            ShowBackupResult("Escolha uma pasta fora da pasta de dados do app: um backup no mesmo lugar não protege contra perder o PC.", error: true);
-            return;
-        }
-        if (await BackupNowCoreAsync(folder))
-        {
-            var previous = await store.LoadAsync();
-            await store.SaveAsync(previous with { BackupFolder = folder });
-            BackupFolder = folder;
-        }
+        var result = await backupActions.ChooseFolderAsync(BackupFolder);
+        if (result is null) return;
+        ShowBackupResult(result.Message, error: !result.Ok);
+        if (result.Ok)
+            BackupFolder = (await store.LoadAsync()).BackupFolder;
+        RefreshLastBackup();
     }
 
     [RelayCommand]
     private async Task DisableBackupAsync()
     {
-        var previous = await store.LoadAsync();
-        await store.SaveAsync(previous with { BackupFolder = null });
+        await backupActions.DisableAsync();
         BackupFolder = null;
         ShowBackupResult("Backup automático desligado. Os backups que já estavam na pasta continuam lá.", error: false);
         RefreshLastBackup();
@@ -223,25 +219,12 @@ public sealed partial class SettingsViewModel(
             await ChooseBackupFolderAsync();
             return;
         }
-        await BackupNowCoreAsync(BackupFolder!);
-    }
-
-    private async Task<bool> BackupNowCoreAsync(string folder)
-    {
         IsBusy = true;
         try
         {
-            var made = await Task.Run(() => backups.CreateAsync(folder, time.GetUtcNow()));
-            FileLog.Info($"Backup manual: {made.Path}");
-            ShowBackupResult($"Backup feito: {Path.GetFileName(made.Path)}", error: false);
-            RefreshLastBackup(folder);
-            return true;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Microsoft.Data.Sqlite.SqliteException)
-        {
-            FileLog.Error("Falha no backup manual", ex);
-            ShowBackupResult($"Não foi possível gravar o backup nessa pasta: {ex.Message}", error: true);
-            return false;
+            var result = await backupActions.BackupNowAsync(BackupFolder!);
+            ShowBackupResult(result.Message, error: !result.Ok);
+            RefreshLastBackup();
         }
         finally
         {
@@ -300,26 +283,7 @@ public sealed partial class SettingsViewModel(
         IsBackupError = error;
     }
 
-    private void RefreshLastBackup(string? folder = null)
-    {
-        folder ??= BackupFolder;
-        if (string.IsNullOrWhiteSpace(folder))
-        {
-            LastBackupText = "Sem backup automático, seus dados pessoais existem só neste computador.";
-            return;
-        }
-        var all = BackupService.List(folder);
-        LastBackupText = all.Count == 0
-            ? "Nenhum backup nesta pasta ainda."
-            : $"Último backup: {all[0].CreatedUtc.ToLocalTime():dd/MM/yyyy 'às' HH:mm} · {all.Count} guardado(s), ficam os {BackupService.KeepCount} mais recentes.";
-    }
-
-    private bool IsInsideDataFolder(string folder)
-    {
-        var root = Path.GetFullPath(paths.Root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        var chosen = Path.GetFullPath(folder).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        return chosen.StartsWith(root, StringComparison.OrdinalIgnoreCase);
-    }
+    private void RefreshLastBackup() => LastBackupText = BackupActions.DescribeLast(BackupFolder);
 
     [RelayCommand]
     private static void OpenApiKeyPage() => OpenUrl("https://steamcommunity.com/dev/apikey");
