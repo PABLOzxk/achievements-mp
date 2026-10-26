@@ -9,8 +9,9 @@ namespace AchievementsMP.App.ViewModels;
 public sealed partial class MainViewModel : ObservableObject
 {
     public MainViewModel(OverviewViewModel overview, LibraryViewModel library, GameDetailsViewModel details, PlannerViewModel planner, SettingsViewModel settings,
-        SetupViewModel setup, SyncCoordinator sync, StatusInfo status, AutoBackup backup, ISettingsStore settingsStore, ISecretStore secrets)
+        SetupViewModel setup, SyncCoordinator sync, StatusInfo status, AutoBackup backup, ISettingsStore settingsStore, ISecretStore secrets, AppUpdater updater)
     {
+        Updater = updater;
         _backup = backup;
         _setup = setup;
         _settingsStore = settingsStore;
@@ -61,6 +62,15 @@ public sealed partial class MainViewModel : ObservableObject
     public SettingsViewModel Settings { get; }
     public SyncCoordinator Sync { get; }
     public StatusInfo Status { get; }
+    public AppUpdater Updater { get; }
+
+    /// <summary>Grava o que estiver pendente, faz o backup do dia e reabre o app já na versão nova.</summary>
+    [RelayCommand]
+    private async Task RestartToUpdateAsync()
+    {
+        await BeforeExitAsync();
+        Updater.ApplyAndRestart();
+    }
 
     [ObservableProperty]
     private PageViewModel _currentPage;
@@ -110,6 +120,7 @@ public sealed partial class MainViewModel : ObservableObject
         else
             await LoadAsync(CurrentPage);
         _ = _backup.RunIfDueAsync();
+        _ = Updater.CheckAsync(userAsked: false);
         try
         {
             await Sync.InitializeAsync();

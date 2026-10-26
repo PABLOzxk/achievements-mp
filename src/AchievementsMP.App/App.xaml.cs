@@ -15,6 +15,7 @@ using AchievementsMP.Steam;
 using AchievementsMP.Steam.Http;
 using AchievementsMP.Sync;
 using Microsoft.Extensions.DependencyInjection;
+using Velopack;
 
 namespace AchievementsMP.App;
 
@@ -24,6 +25,16 @@ public partial class App : Application
     internal const string WaitForPidArgument = "--wait-pid";
 
     private ServiceProvider? _services;
+
+    [STAThread]
+    public static void Main()
+    {
+        // Instalar, atualizar e desinstalar chamam o exe com argumentos próprios: o Velopack trata e encerra antes do WPF.
+        VelopackApp.Build().Run();
+        var app = new App();
+        app.InitializeComponent();
+        app.Run();
+    }
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -79,6 +90,7 @@ public partial class App : Application
         services.AddSingleton<AutoBackup>();
         services.AddSingleton<IShell, WpfShell>();
         services.AddSingleton<BackupActions>();
+        services.AddSingleton<AppUpdater>();
 
         services.AddSingleton<ISteamWebApi>(sp =>
         {

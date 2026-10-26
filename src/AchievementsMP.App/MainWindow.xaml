@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:AchievementsMP.App.ViewModels"
         xmlns:views="clr-namespace:AchievementsMP.App.Views"
-        Title="Achievements MP" Width="1280" Height="800" MinWidth="960" MinHeight="600"
+        Title="Achievements MP" Icon="Assets/app.ico" Width="1280" Height="800" MinWidth="960" MinHeight="600"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource WindowBrush}"
         FontFamily="{StaticResource UiFont}"
@@ -74,6 +74,20 @@
                         <Button Content="Cancelar" Command="{Binding CancelCommand}" Padding="12,6"
                                 Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
                     </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Atualização baixada e pronta -->
+            <Border DockPanel.Dock="Bottom" Margin="16,0,16,12" Padding="12" CornerRadius="4" Background="{StaticResource CardBrush}"
+                    BorderBrush="{StaticResource SuccessBrush}" BorderThickness="1,0,0,0"
+                    DataContext="{Binding Updater}"
+                    Visibility="{Binding IsUpdateReady, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock FontSize="12" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap">
+                        <Run Text="Versão" /> <Run Text="{Binding ReadyVersion, Mode=OneWay}" /> <Run Text="pronta para instalar." />
+                    </TextBlock>
+                    <Button Content="Reiniciar e atualizar" Style="{StaticResource PrimaryButton}" Padding="12,6" Margin="0,8,0,0"
+                            Command="{Binding DataContext.RestartToUpdateCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
                 </StackPanel>
             </Border>
 

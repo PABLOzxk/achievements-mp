@@ -92,6 +92,22 @@
                 </StackPanel>
             </Border>
 
+            <!-- Atualizações -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="ATUALIZAÇÕES" Style="{StaticResource SectionTitle}" />
+                    <TextBlock Text="{Binding VersionText}" Style="{StaticResource Body}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Content="Procurar atualizações" Command="{Binding CheckUpdatesCommand}" />
+                        <Button Style="{StaticResource LinkButton}" Content="Abrir página de downloads" Margin="14,0,0,0" VerticalAlignment="Center"
+                                Command="{Binding OpenReleasesPageCommand}" />
+                        <Button Style="{StaticResource LinkButton}" Content="Política de privacidade" Margin="14,0,0,0" VerticalAlignment="Center"
+                                Command="{Binding OpenPrivacyPolicyCommand}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding Updater.StatusText}" Style="{StaticResource Hint}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
             <!-- Dados -->
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <DockPanel>

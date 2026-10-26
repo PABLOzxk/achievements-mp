@@ -1,13 +1,31 @@
 # Achievements MP
 
 App Windows para acompanhar conquistas da Steam: biblioteca, progresso por jogo, metas e um planejador de 100%.
-Tudo fica num banco SQLite local; a Steam é consultada só para leitura.
+Tudo fica num banco SQLite no seu computador; a Steam é consultada só para leitura. Não é afiliado à Valve nem à Steam.
 
-## Estado atual: Fase 4 (planejador e metas)
+## Instalar
+
+1. Baixe o **`AchievementsMP.App-win-Setup.exe`** da [última versão](https://github.com/PABLOzxk/achievements-mp/releases/latest) e abra.
+2. O instalador não é assinado digitalmente, então o Windows mostra **"O Windows protegeu o computador"**.
+   Clique em **Mais informações → Executar assim mesmo**. Isso só acontece na instalação: as atualizações o app baixa sozinho.
+3. Na primeira abertura, o guia **Primeiros passos** pede o link do seu perfil Steam e uma chave pessoal da Steam Web API,
+   e confere se o perfil está público. Nenhuma senha é pedida.
+4. Em **Configurações → Backup**, escolha uma pasta do OneDrive, Google Drive ou um pendrive. O que você anota e planeja
+   no app não existe na Steam; o backup é a única cópia fora do PC.
+
+Sem instalar: o `AchievementsMP.App-win-Portable.zip` roda de qualquer pasta, mas não se atualiza sozinho.
+
+- **Atualizações:** o app procura versões novas no GitHub ao abrir, baixa em segundo plano e avisa no menu lateral.
+  A troca acontece quando você clica em "Reiniciar e atualizar" ou na próxima vez que abrir o app.
+- **Desinstalar** (Configurações do Windows → Aplicativos) remove o programa, mas mantém seus dados em
+  `%LocalAppData%\AchievementsMP`. Apague essa pasta se quiser remover tudo.
+- **Privacidade:** veja [PRIVACIDADE.md](PRIVACIDADE.md). Não há servidor do app nem telemetria.
+
+## Estado atual: Fase 5 (validação e distribuição)
 
 | Pronto | Ainda não |
 | --- | --- |
-| Solução .NET 10 (LTS) em camadas, SQLite com migrações e backup | Instalador (Fase 5) |
+| Solução .NET 10 (LTS) em camadas, SQLite com migrações e backup | Assinatura digital do instalador (paga; fora do escopo por ora) |
 | Sincronização incremental com a Steam (biblioteca, conquistas, raridade) | |
 | Biblioteca: busca, filtros (situação, viabilidade, lista) e 6 ordenações | |
 | Detalhes do jogo: conquistas com estado, data e raridade global | |
@@ -15,6 +33,9 @@ Tudo fica num banco SQLite local; a Steam é consultada só para leitura.
 | Viabilidade de 100% pela raridade da conquista mais rara que falta | |
 | Planejador de 100%: classificação por conquista, anotações, guias, checklist | |
 | Metas com progresso automático (100%, conquista, N por dia/semana) | |
+| Guia de primeira configuração que confere perfil, chave e privacidade | |
+| Backup diário numa pasta escolhida e restauração com conferência | |
+| Instalador e atualização automática pelas Releases do GitHub (Velopack) | |
 | Testes xUnit + teste de fumaça das telas no Windows, CI no Windows | |
 
 ## Planejador de 100%
@@ -52,7 +73,30 @@ campanha parecem raras só porque muita gente abandona antes. É um indicador pa
 5. Chave inválida ou "Detalhes do jogo" privados interrompem tudo na hora, em vez de gastar centenas de chamadas.
 6. Trocar de conta descarta o progresso da conta anterior (dado da Steam), mas nunca listas, metas ou anotações.
 
-## Rodar no Windows
+## Backup e restauração
+
+- Um backup por dia, ao abrir ou ao fechar o app, na pasta escolhida. Ficam os 10 mais recentes; a limpeza só apaga
+  arquivos com o nome exato `AchievementsMP-backup-AAAA-MM-DD_HHMMSS.db`, nunca outros arquivos da pasta.
+- Cada backup é um arquivo único (sem `-wal` ao lado), gravado como `.partial` e renomeado no fim: um backup
+  interrompido nunca parece válido.
+- **Restaurar** confere o arquivo (cabeçalho SQLite, integridade, versão e tabelas), mostra o que tem dentro e reinicia
+  o app. A troca acontece na abertura, antes de qualquer conexão com o banco, depois de guardar uma cópia dos dados
+  atuais em `backups\antes-de-restaurar-*.db`. Arquivo inválido é descartado sem tocar nos dados; backup de versão
+  antiga é migrado.
+- A chave da Steam vai no backup, cifrada pelo Windows: num PC ou usuário diferente ela não abre e o app pede de novo.
+
+## Publicar uma versão
+
+1. Suba a `<Version>` em `src/AchievementsMP.App/AchievementsMP.App.csproj` e, se quiser notas, crie `docs/notas/vX.Y.Z.md`.
+2. Crie e envie a tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+3. O workflow **Release** roda os testes, gera o instalador com o Velopack, instala num Windows limpo para conferir e
+   publica nas Releases. O app instalado de quem já usa encontra a versão nova sozinho.
+
+Para testar sem publicar, rode o workflow manualmente (Actions → Release → Run workflow): ele cria um rascunho, que só
+quem tem acesso ao repositório vê. O `PACK_ID` (`AchievementsMP.App`) nunca deve mudar, porque é ele que liga as
+instalações às atualizações.
+
+## Rodar no Windows (desenvolvimento)
 
 1. Instale o [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 2. Na pasta do projeto:
@@ -73,6 +117,7 @@ src/
   AchievementsMP.Core    Domínio puro: jogos, conquistas, progresso, configurações. Sem dependências.
   AchievementsMP.Data    SQLite (Microsoft.Data.Sqlite + Dapper), migrações e repositórios.
   AchievementsMP.Steam   Steam Web API atrás de ISteamWebApi. Parser separado do HTTP.
+  AchievementsMP.Sync    Sincronização incremental e a verificação do guia de configuração.
   AchievementsMP.App     WPF (MVVM com CommunityToolkit.Mvvm). Só esta camada depende do Windows.
 tests/
   AchievementsMP.Tests   xUnit. Banco real em arquivo temporário; Steam com respostas gravadas.

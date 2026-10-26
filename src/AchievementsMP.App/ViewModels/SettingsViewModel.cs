@@ -18,7 +18,7 @@ public sealed record LanguageOption(string Code, string Label)
 
 public sealed partial class SettingsViewModel(
     ISettingsStore store, ISecretStore secrets, ISteamWebApi steam, AppPaths paths,
-    BackupService backups, BackupActions backupActions, AutoBackup autoBackup, IShell shell) : PageViewModel
+    BackupService backups, BackupActions backupActions, AutoBackup autoBackup, IShell shell, AppUpdater updater, StatusInfo status) : PageViewModel
 {
     public override string Title => "Configurações";
     public override string Glyph => "";
@@ -34,6 +34,20 @@ public sealed partial class SettingsViewModel(
     public string DataFolder => paths.Root;
 
     internal Action? NavigateToSetup { get; set; }
+
+    public AppUpdater Updater => updater;
+    public string VersionText => updater.IsInstalled
+        ? $"Versão {status.AppVersion}, instalada. Atualiza sozinha pelo GitHub."
+        : $"Versão {status.AppVersion}, cópia portátil (sem atualização automática).";
+
+    [RelayCommand]
+    private Task CheckUpdatesAsync() => updater.CheckAsync(userAsked: true);
+
+    [RelayCommand]
+    private static void OpenReleasesPage() => OpenUrl(AppUpdater.RepositoryUrl + "/releases/latest");
+
+    [RelayCommand]
+    private static void OpenPrivacyPolicy() => OpenUrl(AppUpdater.RepositoryUrl + "/blob/main/PRIVACIDADE.md");
 
     [RelayCommand]
     private void OpenSetupGuide() => NavigateToSetup?.Invoke();

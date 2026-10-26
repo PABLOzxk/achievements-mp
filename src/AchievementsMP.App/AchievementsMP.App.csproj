@@ -6,9 +6,17 @@
     <AssemblyName>AchievementsMP</AssemblyName>
     <RootNamespace>AchievementsMP.App</RootNamespace>
     <Product>Achievements MP</Product>
-    <Version>0.5.0</Version>
+    <Version>0.6.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <!-- Main próprio (App.xaml.cs): o Velopack precisa rodar antes do WPF na instalação e nas atualizações. -->
+    <StartupObject>AchievementsMP.App.App</StartupObject>
   </PropertyGroup>
+  <ItemGroup>
+    <ApplicationDefinition Remove="App.xaml" />
+    <Page Include="App.xaml" />
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AchievementsMP.Core\AchievementsMP.Core.csproj" />
     <ProjectReference Include="..\AchievementsMP.Data\AchievementsMP.Data.csproj" />
@@ -21,5 +29,6 @@
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Velopack" />
   </ItemGroup>
 </Project>

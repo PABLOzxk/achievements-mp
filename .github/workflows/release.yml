@@ -1,0 +1,93 @@
+name: Release
+
+# Gera o instalador (Velopack) e publica nas Releases do GitHub, de onde o app instalado se atualiza.
+# Tag vX.Y.Z (igual à <Version> do app) publica de vez; o disparo manual cria um rascunho, que só aparece
+# para quem tem acesso ao repositório.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publicar de vez (desmarcado = rascunho)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  VPK_VERSION: '1.2.161'   # igual ao pacote Velopack do app
+  PACK_ID: AchievementsMP.App # não mudar: é o que liga uma instalação às atualizações (e a pasta de instalação)
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Versão do app
+        id: version
+        shell: bash
+        run: |
+          version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/AchievementsMP.App/AchievementsMP.App.csproj)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo "::error::A tag $GITHUB_REF_NAME não bate com a versão $version do app."
+            exit 1
+          fi
+
+      - name: Testes
+        run: |
+          dotnet restore
+          dotnet build --no-restore -c Release
+          dotnet test --no-build -c Release
+
+      - name: Publicar o app
+        run: dotnet publish src/AchievementsMP.App -c Release -r win-x64 --self-contained true -p:DebugType=none -o publish
+
+      - name: Empacotar
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dotnet tool install vpk --version "$VPK_VERSION" --tool-path .tools
+          # A última versão publicada permite gerar o pacote delta (atualização pequena).
+          ./.tools/vpk download github --repoUrl "https://github.com/${{ github.repository }}" --token "$GH_TOKEN" -o Releases \
+            || echo "Nenhuma versão anterior publicada; só o pacote completo."
+          notes=()
+          if [[ -f "docs/notas/v${{ steps.version.outputs.version }}.md" ]]; then
+            notes=(--releaseNotes "docs/notas/v${{ steps.version.outputs.version }}.md")
+          fi
+          ./.tools/vpk pack -u "$PACK_ID" -v "${{ steps.version.outputs.version }}" -p publish -e AchievementsMP.exe \
+            --packTitle "Achievements MP" --packAuthors "PABLOzxk" -i src/AchievementsMP.App/Assets/app.ico -o Releases "${notes[@]}"
+
+      - name: Testar a instalação
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem Releases -Filter "*-Setup.exe" | Select-Object -First 1
+          $log = Join-Path $env:RUNNER_TEMP "setup.log"
+          $p = Start-Process $setup.FullName -ArgumentList "--silent", "--log", $log -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content $log; Write-Error "Setup terminou com código $($p.ExitCode)"; exit 1 }
+          Start-Sleep -Seconds 5
+          Get-Process AchievementsMP -ErrorAction SilentlyContinue | Stop-Process -Force
+          $exe = Get-ChildItem $env:LOCALAPPDATA -Recurse -Depth 3 -Filter AchievementsMP.exe -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -like "*\current\*" } | Select-Object -First 1
+          if (-not $exe) { Get-Content $log; Write-Error "A instalação não criou AchievementsMP.exe"; exit 1 }
+          Write-Host "Instalado em $($exe.FullName)"
+          # Os dados do usuário ficam em %LocalAppData%\AchievementsMP; a instalação (que o desinstalador apaga) não pode cair lá.
+          if ($exe.FullName -like "$env:LOCALAPPDATA\AchievementsMP\*") { Write-Error "Instalou dentro da pasta de dados do app"; exit 1 }
+
+      - name: Enviar para as Releases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          publish=()
+          if [[ "$GITHUB_REF_TYPE" == "tag" || "${{ inputs.publish }}" == "true" ]]; then publish=(--publish); fi
+          ./.tools/vpk upload github --repoUrl "https://github.com/${{ github.repository }}" --token "$GH_TOKEN" -o Releases \
+            --releaseName "Achievements MP ${{ steps.version.outputs.version }}" --tag "v${{ steps.version.outputs.version }}" \
+            --targetCommitish "${{ github.sha }}" "${publish[@]}"
