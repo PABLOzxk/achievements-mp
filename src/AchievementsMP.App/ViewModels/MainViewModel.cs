@@ -157,8 +157,8 @@ public sealed partial class MainViewModel : ObservableObject
     }
 }
 
-/// <summary>Informações do rodapé: onde estão os dados e em que versão o banco está.</summary>
+/// <summary>Onde estão os dados e em que versão estão o banco e o app. A janela mostra só a versão do app, no canto.</summary>
 public sealed record StatusInfo(string DataFolder, int SchemaVersion, string AppVersion)
 {
-    public string Text => $"Dados em {DataFolder}  ·  banco v{SchemaVersion}  ·  app v{AppVersion}";
+    public string VersionText => $"v{AppVersion}";
 }

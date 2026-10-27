@@ -29,13 +29,9 @@
             <ColumnDefinition Width="232" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
 
         <!-- Navegação lateral. Rola só quando a janela é baixa demais para tudo caber; senão o rodapé fica colado embaixo. -->
-        <ScrollViewer Grid.Column="0" Grid.Row="0" Background="{StaticResource WindowBrush}" Focusable="False"
+        <ScrollViewer Grid.Column="0" Background="{StaticResource WindowBrush}" Focusable="False"
                       VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <Grid MinHeight="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
                 <Grid.RowDefinitions>
@@ -91,40 +87,37 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Sincronização -->
-                <Border Grid.Row="4" Margin="16,0,16,12" Padding="12" CornerRadius="4" Background="{StaticResource CardBrush}"
-                        DataContext="{Binding Sync}">
-                    <StackPanel>
-                        <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" FontSize="12" MaxHeight="96" TextTrimming="CharacterEllipsis"
-                                   ToolTip="{Binding StatusText}">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding LastFailed}" Value="True">
-                                            <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                        <ProgressBar Margin="0,8,0,0" Value="{Binding ProgressPercent, Mode=OneWay}" Maximum="100"
-                                     IsIndeterminate="{Binding IsIndeterminate}"
-                                     Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
-                        <Grid Margin="0,10,0,0">
-                            <Button Style="{StaticResource QuietButton}" Command="{Binding SyncNowCommand}" HorizontalAlignment="Left"
-                                    ToolTip="Buscar agora o que mudou na Steam"
-                                    Visibility="{Binding IsRunning, Converter={StaticResource InverseBoolToVisibility}}">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE72C;" FontFamily="{StaticResource IconFont}" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" />
-                                    <TextBlock Text="Sincronizar agora" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Button>
-                            <Button Style="{StaticResource QuietButton}" Content="Cancelar" Command="{Binding CancelCommand}" HorizontalAlignment="Left"
-                                    Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
-                        </Grid>
-                    </StackPanel>
-                </Border>
+                <!-- Sincronização, sem cartão de fundo: só o texto e o botão, alinhados com a foto e a logo. -->
+                <StackPanel Grid.Row="4" Margin="18,0,16,14" DataContext="{Binding Sync}">
+                    <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" FontSize="12" MaxHeight="96" TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding StatusText}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding LastFailed}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <ProgressBar Margin="0,8,0,0" Value="{Binding ProgressPercent, Mode=OneWay}" Maximum="100"
+                                 IsIndeterminate="{Binding IsIndeterminate}"
+                                 Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
+                    <Grid Margin="0,10,0,0">
+                        <Button Style="{StaticResource QuietButton}" Command="{Binding SyncNowCommand}" HorizontalAlignment="Left"
+                                ToolTip="Buscar agora o que mudou na Steam"
+                                Visibility="{Binding IsRunning, Converter={StaticResource InverseBoolToVisibility}}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE72C;" FontFamily="{StaticResource IconFont}" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Text="Sincronizar agora" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource QuietButton}" Content="Cancelar" Command="{Binding CancelCommand}" HorizontalAlignment="Left"
+                                Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
+                    </Grid>
+                </StackPanel>
 
                 <Image Grid.Row="5" Source="Assets/logo.png" Width="200" Margin="16,4,16,18" HorizontalAlignment="Left"
                        RenderOptions.BitmapScalingMode="HighQuality" AutomationProperties.Name="Achievements MP: rumo ao 100%" />
@@ -133,14 +126,13 @@
 
         <!-- Conteúdo -->
         <!-- Cada página cuida da própria rolagem (a biblioteca precisa de virtualização). -->
-        <Border Grid.Column="1" Grid.Row="0" Background="{StaticResource SurfaceGradientBrush}">
-            <ContentControl Content="{Binding CurrentPage}" Focusable="False" />
-        </Border>
-
-        <!-- Rodapé -->
-        <Border Grid.Row="1" Grid.ColumnSpan="2" Background="{StaticResource WindowBrush}" Padding="20,6"
-                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
-            <TextBlock Text="{Binding Status.Text}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
+        <!-- A versão fica numa faixa própria no canto, sem barra, para nunca cobrir a lista nem a barra de rolagem. -->
+        <Border Grid.Column="1" Background="{StaticResource SurfaceGradientBrush}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status.VersionText}" HorizontalAlignment="Right" Margin="0,2,16,6"
+                           FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                <ContentControl Content="{Binding CurrentPage}" Focusable="False" />
+            </DockPanel>
         </Border>
     </Grid>
 </Window>
