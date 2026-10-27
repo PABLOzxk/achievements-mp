@@ -18,17 +18,6 @@ jobs:
         env:
           # Os testes de interface gravam imagens das telas aqui (ver ViewSmokeTests.Snapshot).
           AMP_UI_SNAPSHOTS: ${{ github.workspace }}/ui-snapshots
-      # TEMPORÁRIO: imprime as telas no log para conferência remota; sai antes do merge.
-      - name: Telas em base64
-        if: always()
-        shell: pwsh
-        run: |
-          Get-ChildItem ui-snapshots -Filter *.png -ErrorAction SilentlyContinue | ForEach-Object {
-            $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($_.FullName))
-            Write-Output "TELA-INICIO $($_.Name) $($b64.Length)"
-            for ($i = 0; $i -lt $b64.Length; $i += 4000) { Write-Output ("TELA-B64 " + $b64.Substring($i, [Math]::Min(4000, $b64.Length - $i))) }
-            Write-Output "TELA-FIM $($_.Name)"
-          }
       - uses: actions/upload-artifact@v6
         if: always()
         with:
