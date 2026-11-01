@@ -18,8 +18,11 @@ public sealed record LanguageOption(string Code, string Label)
 
 public sealed partial class SettingsViewModel(
     ISettingsStore store, ISecretStore secrets, ISteamWebApi steam, AppPaths paths,
-    BackupService backups, BackupActions backupActions, AutoBackup autoBackup, IShell shell, AppUpdater updater, StatusInfo status) : PageViewModel
+    BackupService backups, BackupActions backupActions, AutoBackup autoBackup, IShell shell, AppUpdater updater, StatusInfo status,
+    XboxAccountViewModel xbox) : PageViewModel
 {
+    public XboxAccountViewModel Xbox => xbox;
+
     public override string Title => "Configurações";
     public override string Glyph => "";
 
@@ -98,6 +101,7 @@ public sealed partial class SettingsViewModel(
         await RefreshKeyStatusAsync();
         StatusMessage = "";
         BackupFolder = s.BackupFolder;
+        await xbox.RefreshAsync();
         BackupStatus = autoBackup.LastError is { } error ? $"O último backup automático falhou: {error}" : "";
         IsBackupError = autoBackup.LastError is not null;
         RefreshLastBackup();

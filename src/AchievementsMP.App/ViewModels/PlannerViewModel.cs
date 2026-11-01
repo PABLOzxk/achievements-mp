@@ -215,9 +215,9 @@ public sealed partial class PlannerViewModel : PageViewModel
         var total = _achievements.Count;
         Summary = total switch
         {
-            0 => "Este jogo não tem conquistas na Steam.",
+            0 => $"Este jogo não tem conquistas {Game.Platform.InName()}.",
             _ when plan.Pending == 0 && plan.Unknown == 0 => $"Completo: {plan.Unlocked} de {total}. Nada a planejar.",
-            _ when plan.Pending == 0 => $"{plan.Unknown} conquistas sem dados da Steam. Sincronize para planejar.",
+            _ when plan.Pending == 0 => $"{plan.Unknown} conquistas sem dados {Game.Platform.OfName()}. Sincronize para planejar.",
             _ => $"Faltam {plan.Pending} de {total}"
                  + (plan.MissablePending > 0 ? $" · {plan.MissablePending} perdíveis" : "")
                  + (plan.Unclassified > 0 ? $" · {plan.Unclassified} sem classificação" : " · todas classificadas")

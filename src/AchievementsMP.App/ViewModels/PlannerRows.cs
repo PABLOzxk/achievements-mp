@@ -61,7 +61,7 @@ public sealed record PlanAchievementRow(
     {
         var a = e.Achievement;
         var (rarity, rarityText) = AchievementItem.DescribeRarity(a.GlobalPercent);
-        var description = a.Description ?? (a.Hidden ? "Conquista oculta: a Steam não mostra a descrição até você desbloquear." : "Sem descrição.");
+        var description = a.Description ?? (a.Hidden ? "Conquista oculta: a descrição só aparece depois que você desbloquear." : "Sem descrição.");
         return new PlanAchievementRow(
             a.ApiName, a.DisplayName, description, a.IconGrayUrl ?? a.IconUrl, rarityText, rarity,
             e.Plan.Missable == Missable.Yes,

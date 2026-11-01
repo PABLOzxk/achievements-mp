@@ -65,7 +65,7 @@ public class ViewSmokeTests
         Assert.Equal(3, library.Items.Count);
         // Com jogos de duas plataformas aparecem o filtro e o nome da plataforma em cada jogo.
         Assert.True(library.HasSeveralPlatforms);
-        Assert.Equal("Xbox · Nunca jogado", library.Items.Single(i => i.Name == "Halo Infinite").Subtitle);
+        Assert.Equal("Xbox · Tempo de jogo não informado", library.Items.Single(i => i.Name == "Halo Infinite").Subtitle);
         library.PlatformFilter = library.PlatformOptions.Single(o => o.Value == Platform.Xbox);
         Render(new LibraryView(), library);
         Assert.Equal(["Halo Infinite"], library.Items.Select(i => i.Name));

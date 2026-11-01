@@ -225,7 +225,7 @@
 
                 <!-- Lista do plano -->
                 <TextBlock Style="{StaticResource Body}" Margin="0,8,0,0" VerticalAlignment="Top" Foreground="{StaticResource TextMutedBrush}"
-                           Text="Nenhuma conquista pendente com dados da Steam."
+                           Text="Nenhuma conquista pendente com dados da plataforma."
                            Visibility="{Binding HasRows, Converter={StaticResource InverseBoolToVisibility}}" />
                 <ListBox x:Name="PlanList" ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRowItem}"
                          SelectionChanged="OnPlanSelectionChanged"
@@ -285,7 +285,7 @@
                             <StackPanel>
                                 <TextBlock Text="CLASSIFICAR CONQUISTA" Style="{StaticResource SectionTitle}" />
                                 <TextBlock Style="{StaticResource Body}" FontSize="13"
-                                           Text="Clique numa conquista da lista para marcar se é perdível, rápida ou demorada, anotar requisitos e guardar links de guia. A Steam não fornece esses dados: o que você não marcar fica como “não sei”." />
+                                           Text="Clique numa conquista da lista para marcar se é perdível, rápida ou demorada, anotar requisitos e guardar links de guia. A Steam e o Xbox não fornecem esses dados: o que você não marcar fica como “não sei”." />
                             </StackPanel>
                         </Border>
 

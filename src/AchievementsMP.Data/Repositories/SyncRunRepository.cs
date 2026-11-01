@@ -11,6 +11,7 @@ public sealed class SyncRunRepository(SqliteConnectionFactory factory)
 {
     public const string LibraryScope = "library";
     public const string GameScope = "game";
+    public const string XboxScope = "xbox";
 
     public async Task<long> StartAsync(string scope, long? appId, DateTimeOffset now, CancellationToken ct = default)
     {

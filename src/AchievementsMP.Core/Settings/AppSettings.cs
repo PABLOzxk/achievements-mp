@@ -25,5 +25,8 @@ public sealed record AppSettings
     /// <summary>Pasta do backup automático diário (ex.: dentro do OneDrive). Nula = backup automático desligado.</summary>
     public string? BackupFolder { get; init; }
 
+    /// <summary>Gamertag da conta Xbox conectada, só para exibir. O login fica cifrado à parte.</summary>
+    public string? XboxGamertag { get; init; }
+
     public static readonly AppSettings Default = new();
 }

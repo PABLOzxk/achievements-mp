@@ -26,6 +26,12 @@ public static class Platforms
         _ => platform.ToString(),
     };
 
+    /// <summary>"na Steam", "no Xbox", "na PlayStation".</summary>
+    public static string InName(this Platform platform) => (platform == Platform.Xbox ? "no " : "na ") + platform.DisplayName();
+
+    /// <summary>"da Steam", "do Xbox", "da PlayStation".</summary>
+    public static string OfName(this Platform platform) => (platform == Platform.Xbox ? "do " : "da ") + platform.DisplayName();
+
     public static long FirstId(this Platform platform) => (long)platform * RangeSize;
 
     public static long LastId(this Platform platform) => FirstId(platform) + RangeSize - 1;

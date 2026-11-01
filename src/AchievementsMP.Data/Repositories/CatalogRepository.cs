@@ -98,11 +98,28 @@ public sealed class CatalogRepository(SqliteConnectionFactory factory)
                 tx, cancellationToken: ct));
         }
 
-        if (isCompleteLibrary && games.Count > 0)
-            await MarkMissingAsNotOwnedAsync(c, tx, platform, ts, ct);
+        var present = games.Select(g => g.ExternalId).Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal).ToArray();
+        if (isCompleteLibrary && present.Length > 0)
+        {
+            // Pelo ID e não pela hora: duas leituras no mesmo segundo não podem deixar um jogo que saiu como "possuído".
+            await c.ExecuteAsync(new CommandDefinition(
+                "UPDATE games SET is_owned = 0 WHERE platform = @platform AND is_owned = 1 AND external_id NOT IN @present",
+                new { platform = (int)platform, present }, tx, cancellationToken: ct));
+        }
 
         await tx.CommitAsync(ct);
         return ids;
+    }
+
+    /// <summary>
+    /// Tira da biblioteca todos os jogos de uma plataforma (ao desconectar a conta). Nada é apagado: progresso, metas,
+    /// listas e anotações voltam se a conta for conectada de novo.
+    /// </summary>
+    public async Task SetPlatformNotOwnedAsync(Platform platform, CancellationToken ct = default)
+    {
+        await using var c = await factory.OpenAsync(ct);
+        await c.ExecuteAsync(new CommandDefinition(
+            "UPDATE games SET is_owned = 0 WHERE platform = @platform", new { platform = (int)platform }, cancellationToken: ct));
     }
 
     private static Task MarkMissingAsNotOwnedAsync(System.Data.Common.DbConnection c, System.Data.Common.DbTransaction tx, Platform platform, long ts, CancellationToken ct) =>
