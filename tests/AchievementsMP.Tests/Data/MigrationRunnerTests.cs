@@ -57,7 +57,7 @@ public class MigrationRunnerTests
         Assert.Equal(1, result.FromVersion);
         Assert.Equal(Schema.LatestVersion, result.ToVersion);
         Assert.NotNull(result.BackupPath);
-        var games = await new AchievementsMP.Data.Repositories.SteamCatalogRepository(db.Factory).GetSyncStatesAsync();
+        var games = await new AchievementsMP.Data.Repositories.CatalogRepository(db.Factory).GetSyncStatesAsync();
         Assert.Equal("Portal 2", Assert.Single(games).Name);
     }
 
@@ -82,6 +82,29 @@ public class MigrationRunnerTests
         Assert.Equal(("Platinar Portal", AchievementsMP.Core.Domain.GoalKind.Custom, AchievementsMP.Core.Domain.GoalPeriod.None), (goal.Title, goal.Kind, goal.Period));
         Assert.Equal("https://example.com/portal", Assert.Single(await planner.GetGuidesAsync(620)).Url.AbsoluteUri);
         Assert.Equal("Achar o bolo", Assert.Single(await planner.GetTasksAsync(620)).Title);
+    }
+
+    [Fact]
+    public async Task Version_3_database_upgrades_to_platforms_keeping_everything_as_steam()
+    {
+        await using var db = TempDatabase.CreateEmpty();
+        await new MigrationRunner(db.Factory, db.Paths.Backups, Schema.All.Take(3).ToList()).MigrateAsync();
+        await using (var c = await db.Factory.OpenAsync())
+        {
+            await c.ExecuteAsync("INSERT INTO games(app_id, name, icon_hash, first_seen_utc, library_synced_utc) VALUES (620, 'Portal 2', 'abc', 0, 0)");
+            await c.ExecuteAsync("INSERT INTO goals(title, app_id, kind, created_utc) VALUES ('100% Portal', 620, 1, 0)");
+        }
+
+        var result = await new MigrationRunner(db.Factory, db.Paths.Backups).MigrateAsync();
+
+        Assert.Equal(3, result.FromVersion);
+        Assert.NotNull(result.BackupPath);
+        var catalog = new AchievementsMP.Data.Repositories.CatalogRepository(db.Factory);
+        var portal = Assert.Single(await catalog.GetLibraryAsync());
+        Assert.Equal(AchievementsMP.Core.Domain.Platform.Steam, portal.Platform);
+        Assert.Equal("https://media.steampowered.com/steamcommunity/public/images/apps/620/abc.jpg", portal.IconUrl);
+        Assert.Single(await catalog.GetSyncStatesAsync());
+        Assert.Equal(620, Assert.Single(await new AchievementsMP.Data.Repositories.PlannerRepository(db.Factory).GetGoalsAsync()).AppId);
     }
 
     [Fact]

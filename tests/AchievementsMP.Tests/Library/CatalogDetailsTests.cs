@@ -9,9 +9,9 @@ public class CatalogDetailsTests
     private static readonly DateTimeOffset T0 = new(2026, 10, 1, 12, 0, 0, TimeSpan.Zero);
     private const long App = 620;
 
-    private static async Task<SteamCatalogRepository> SeedAsync(TempDatabase db)
+    private static async Task<CatalogRepository> SeedAsync(TempDatabase db)
     {
-        var repo = new SteamCatalogRepository(db.Factory);
+        var repo = new CatalogRepository(db.Factory);
         await repo.UpsertLibraryAsync([new Game(App, "Portal 2", "h", 100, null, true)], T0, isCompleteLibrary: true);
         await repo.UpsertSchemaAsync(App,
         [
@@ -68,7 +68,7 @@ public class CatalogDetailsTests
     public async Task Missing_rarity_makes_viability_unknown()
     {
         await using var db = await TempDatabase.CreateMigratedAsync();
-        var repo = new SteamCatalogRepository(db.Factory);
+        var repo = new CatalogRepository(db.Factory);
         await repo.UpsertLibraryAsync([new Game(App, "Portal 2", null, 1, null, true)], T0, true);
         await repo.UpsertSchemaAsync(App, [new(App, "A", "A", null, false, null, null)], T0);
         await repo.ApplyPlayerStatesAsync(App, [new(App, "A", UnlockState.Locked, null)], T0);

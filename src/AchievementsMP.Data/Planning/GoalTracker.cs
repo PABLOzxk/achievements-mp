@@ -12,7 +12,7 @@ public sealed record GoalView(Goal Goal, GoalProgress Progress, LibraryGame? Gam
 /// Calcula o progresso das metas com os dados da Steam já sincronizados. Metas não recorrentes cumpridas são
 /// marcadas como concluídas (com a data) e ficam assim, mesmo que a Steam mude depois.
 /// </summary>
-public sealed class GoalTracker(PlannerRepository planner, SteamCatalogRepository catalog)
+public sealed class GoalTracker(PlannerRepository planner, CatalogRepository catalog)
 {
     public async Task<IReadOnlyList<GoalView>> GetGoalsAsync(DateTimeOffset now, TimeZoneInfo zone, CancellationToken ct = default)
     {

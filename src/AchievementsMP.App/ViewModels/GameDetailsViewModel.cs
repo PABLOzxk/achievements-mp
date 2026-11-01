@@ -59,7 +59,7 @@ public sealed record AchievementItem(
         percent is { } p ? $"{LibraryItem.FormatPercent(p)} dos jogadores" : "Raridade desconhecida");
 }
 
-public sealed partial class GameDetailsViewModel(SteamCatalogRepository catalog) : PageViewModel
+public sealed partial class GameDetailsViewModel(CatalogRepository catalog) : PageViewModel
 {
     public override string Title => "Detalhes do jogo";
     public override string Glyph => "";

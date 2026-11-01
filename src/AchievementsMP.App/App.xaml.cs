@@ -97,7 +97,7 @@ public partial class App : Application
         services.AddSingleton<SettingsRepository>();
         services.AddSingleton<ISettingsStore>(sp => sp.GetRequiredService<SettingsRepository>());
         services.AddSingleton<ISecretStore>(sp => sp.GetRequiredService<SettingsRepository>());
-        services.AddSingleton<SteamCatalogRepository>();
+        services.AddSingleton<CatalogRepository>();
         services.AddSingleton<PersonalDataRepository>();
         services.AddSingleton<PlannerRepository>();
         services.AddSingleton<ProfileRepository>();
@@ -117,7 +117,7 @@ public partial class App : Application
 
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton(sp => new SyncService(
-            sp.GetRequiredService<ISteamWebApi>(), sp.GetRequiredService<ISettingsStore>(), sp.GetRequiredService<SteamCatalogRepository>(),
+            sp.GetRequiredService<ISteamWebApi>(), sp.GetRequiredService<ISettingsStore>(), sp.GetRequiredService<CatalogRepository>(),
             sp.GetRequiredService<SyncRunRepository>(), sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<SyncCoordinator>();
         services.AddSingleton(sp => new SetupChecker(sp.GetRequiredService<ISteamWebApi>()));

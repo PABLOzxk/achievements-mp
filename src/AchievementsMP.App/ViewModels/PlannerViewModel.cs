@@ -18,12 +18,12 @@ namespace AchievementsMP.App.ViewModels;
 /// </summary>
 public sealed partial class PlannerViewModel : PageViewModel
 {
-    private readonly SteamCatalogRepository _catalog;
+    private readonly CatalogRepository _catalog;
     private readonly PlannerRepository _planner;
     private readonly ISettingsStore _settings;
     private readonly TimeProvider _time;
 
-    public PlannerViewModel(SteamCatalogRepository catalog, PlannerRepository planner, ISettingsStore settings, TimeProvider time, GoalsViewModel goals)
+    public PlannerViewModel(CatalogRepository catalog, PlannerRepository planner, ISettingsStore settings, TimeProvider time, GoalsViewModel goals)
     {
         _catalog = catalog;
         _planner = planner;

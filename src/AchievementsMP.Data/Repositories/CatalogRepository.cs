@@ -7,14 +7,15 @@ using Dapper;
 namespace AchievementsMP.Data.Repositories;
 
 /// <summary>
-/// Escreve os dados oficiais da Steam. Todas as escritas são upserts idempotentes e nunca apagam linhas:
-/// rodar a mesma sincronização duas vezes dá o mesmo resultado, e nada pessoal é tocado.
+/// Escreve os dados oficiais das plataformas (Steam, Xbox, PlayStation). Todas as escritas são upserts idempotentes
+/// e nunca apagam linhas: rodar a mesma sincronização duas vezes dá o mesmo resultado, e nada pessoal é tocado.
+/// A sincronização de uma plataforma nunca altera jogos de outra.
 /// </summary>
-public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
+public sealed class CatalogRepository(SqliteConnectionFactory factory)
 {
     /// <summary>
-    /// Grava a biblioteca. Se <paramref name="isCompleteLibrary"/>, jogos ausentes são marcados como não possuídos
-    /// (não apagados). Uma lista vazia nunca marca nada: quase sempre significa perfil privado, não biblioteca vazia.
+    /// Grava a biblioteca da Steam. Se <paramref name="isCompleteLibrary"/>, jogos da Steam ausentes são marcados como
+    /// não possuídos (não apagados). Uma lista vazia nunca marca nada: quase sempre significa perfil privado, não biblioteca vazia.
     /// </summary>
     public async Task UpsertLibraryAsync(IReadOnlyCollection<Game> games, DateTimeOffset now, bool isCompleteLibrary, CancellationToken ct = default)
     {
@@ -22,7 +23,8 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
         await using var tx = await c.BeginTransactionAsync(ct);
 
         var ts = Time.ToUnix(now);
-        foreach (var g in games.DistinctBy(g => g.AppId))
+        // Um AppId fora da faixa da Steam ocuparia o número de um jogo de outra plataforma.
+        foreach (var g in games.Where(g => Platform.Steam.Owns(g.AppId)).DistinctBy(g => g.AppId))
         {
             await c.ExecuteAsync(new CommandDefinition("""
                 INSERT INTO games(app_id, name, icon_hash, playtime_minutes, last_played_utc, has_community_stats, is_owned, first_seen_utc, library_synced_utc)
@@ -41,14 +43,72 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
         }
 
         if (isCompleteLibrary && games.Count > 0)
-        {
-            await c.ExecuteAsync(new CommandDefinition(
-                "UPDATE games SET is_owned = 0 WHERE library_synced_utc < @ts AND is_owned = 1",
-                new { ts }, tx, cancellationToken: ct));
-        }
+            await MarkMissingAsNotOwnedAsync(c, tx, Platform.Steam, ts, ct);
 
         await tx.CommitAsync(ct);
     }
+
+    /// <summary>
+    /// Grava a biblioteca de uma plataforma que não é a Steam e devolve o número interno de cada jogo, pelo ID original.
+    /// Um jogo novo ganha o próximo número livre da faixa da plataforma; um jogo já conhecido mantém o seu para sempre,
+    /// então metas, listas e anotações continuam ligadas a ele. Mesmas regras de <see cref="UpsertLibraryAsync"/>
+    /// para jogos ausentes e lista vazia.
+    /// </summary>
+    public async Task<IReadOnlyDictionary<string, long>> UpsertPlatformLibraryAsync(Platform platform, IReadOnlyCollection<PlatformGame> games,
+        DateTimeOffset now, bool isCompleteLibrary, CancellationToken ct = default)
+    {
+        if (platform == Platform.Steam)
+            throw new ArgumentException("Jogos da Steam usam o próprio AppId: grave com UpsertLibraryAsync.", nameof(platform));
+
+        await using var c = await factory.OpenAsync(ct);
+        await using var tx = await c.BeginTransactionAsync(ct);
+        var ts = Time.ToUnix(now);
+        var range = new { platform = (int)platform, first = platform.FirstId(), last = platform.LastId() };
+
+        var ids = (await c.QueryAsync<(string ExternalId, long AppId)>(new CommandDefinition(
+                "SELECT external_id, app_id FROM games WHERE platform = @platform AND external_id IS NOT NULL",
+                range, tx, cancellationToken: ct)))
+            .ToDictionary(r => r.ExternalId, r => r.AppId, StringComparer.Ordinal);
+        var next = await c.ExecuteScalarAsync<long?>(new CommandDefinition(
+            "SELECT MAX(app_id) FROM games WHERE app_id BETWEEN @first AND @last", range, tx, cancellationToken: ct)) is { } max
+            ? max + 1
+            : platform.FirstId();
+
+        foreach (var g in games.Where(g => !string.IsNullOrWhiteSpace(g.ExternalId)).DistinctBy(g => g.ExternalId, StringComparer.Ordinal))
+        {
+            if (!ids.TryGetValue(g.ExternalId, out var appId))
+            {
+                if (next > platform.LastId())
+                    throw new InvalidOperationException($"Sem números livres para jogos de {platform.DisplayName()}.");
+                ids[g.ExternalId] = appId = next++;
+            }
+
+            await c.ExecuteAsync(new CommandDefinition("""
+                INSERT INTO games(app_id, platform, external_id, name, image_url, playtime_minutes, last_played_utc, is_owned, first_seen_utc, library_synced_utc)
+                VALUES (@appId, @platform, @ExternalId, @Name, @ImageUrl, @PlaytimeMinutes, @LastPlayed, 1, @ts, @ts)
+                ON CONFLICT(app_id) DO UPDATE SET
+                    name = excluded.name,
+                    image_url = COALESCE(excluded.image_url, games.image_url),
+                    playtime_minutes = excluded.playtime_minutes,
+                    last_played_utc = COALESCE(excluded.last_played_utc, games.last_played_utc),
+                    is_owned = 1,
+                    library_synced_utc = excluded.library_synced_utc
+                """,
+                new { appId, platform = (int)platform, g.ExternalId, g.Name, g.ImageUrl, g.PlaytimeMinutes, LastPlayed = Time.ToUnix(g.LastPlayedUtc), ts },
+                tx, cancellationToken: ct));
+        }
+
+        if (isCompleteLibrary && games.Count > 0)
+            await MarkMissingAsNotOwnedAsync(c, tx, platform, ts, ct);
+
+        await tx.CommitAsync(ct);
+        return ids;
+    }
+
+    private static Task MarkMissingAsNotOwnedAsync(System.Data.Common.DbConnection c, System.Data.Common.DbTransaction tx, Platform platform, long ts, CancellationToken ct) =>
+        c.ExecuteAsync(new CommandDefinition(
+            "UPDATE games SET is_owned = 0 WHERE platform = @platform AND library_synced_utc < @ts AND is_owned = 1",
+            new { platform = (int)platform, ts }, tx, cancellationToken: ct));
 
     /// <summary>Grava o esquema de conquistas. Conquistas que sumiram do esquema são marcadas como removidas, não apagadas.</summary>
     public async Task UpsertSchemaAsync(long appId, IReadOnlyCollection<AchievementDefinition> schema, DateTimeOffset now, string? language = null, CancellationToken ct = default)
@@ -167,7 +227,11 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
             new { appId, availability = (int)availability, error }, cancellationToken: ct));
     }
 
-    public async Task<IReadOnlyList<GameSyncState>> GetSyncStatesAsync(CancellationToken ct = default)
+    /// <summary>Estado de sincronização dos jogos de uma plataforma (a Steam, se não disser).</summary>
+    public async Task<IReadOnlyList<GameSyncState>> GetSyncStatesAsync(CancellationToken ct = default) =>
+        await GetSyncStatesAsync(Platform.Steam, ct);
+
+    public async Task<IReadOnlyList<GameSyncState>> GetSyncStatesAsync(Platform platform, CancellationToken ct = default)
     {
         await using var c = await factory.OpenAsync(ct);
         var rows = await c.QueryAsync<SyncRow>(new CommandDefinition("""
@@ -177,45 +241,62 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
                    g.player_synced_playtime AS PlayerSyncedPlaytime,
                    (SELECT COUNT(*) FROM achievements a WHERE a.app_id = g.app_id AND a.is_removed = 0) AS AchievementCount
             FROM games g
-            """, cancellationToken: ct));
+            WHERE g.platform = @platform
+            """, new { platform = (int)platform }, cancellationToken: ct));
         return rows.Select(r => new GameSyncState(
             r.AppId, r.Name, (int)r.PlaytimeMinutes, Time.FromUnix(r.LastPlayedUtc), r.IsOwned != 0, (DataAvailability)r.Availability,
             Time.FromUnix(r.SchemaSyncedUtc), r.SchemaLanguage, Time.FromUnix(r.PlayerSyncedUtc), (int?)r.PlayerSyncedPlaytime, (int)r.AchievementCount)).ToList();
     }
 
     /// <summary>SteamID64 dono dos dados da Steam no banco (para não misturar contas).</summary>
-    public async Task<ulong?> GetOwnerSteamIdAsync(CancellationToken ct = default)
+    public async Task<ulong?> GetOwnerSteamIdAsync(CancellationToken ct = default) =>
+        ulong.TryParse(await GetOwnerAsync(Platform.Steam, ct), out var id) ? id : null;
+
+    public Task SetOwnerSteamIdAsync(ulong steamId, CancellationToken ct = default) =>
+        SetOwnerAsync(Platform.Steam, steamId.ToString(), ct);
+
+    /// <summary>Conta dona dos dados da plataforma no banco (SteamID64, XUID do Xbox, accountId da PlayStation).</summary>
+    public async Task<string?> GetOwnerAsync(Platform platform, CancellationToken ct = default)
     {
         await using var c = await factory.OpenAsync(ct);
-        var raw = await c.QuerySingleOrDefaultAsync<string?>(new CommandDefinition(
-            "SELECT CAST(value AS TEXT) FROM settings WHERE key = 'catalog_owner_steam_id'", cancellationToken: ct));
-        return ulong.TryParse(raw, out var id) ? id : null;
+        return await c.QuerySingleOrDefaultAsync<string?>(new CommandDefinition(
+            "SELECT CAST(value AS TEXT) FROM settings WHERE key = @key", new { key = OwnerKey(platform) }, cancellationToken: ct));
     }
 
     /// <summary>
-    /// Troca o dono dos dados da Steam. Se mudou de conta, o progresso da conta anterior é descartado
-    /// (é dado da Steam, recuperável) e os jogos voltam a "não possuído" até a próxima importação.
-    /// Listas, metas e anotações não são tocadas.
+    /// Troca a conta dona dos dados da plataforma. Se mudou de conta, o progresso da conta anterior nessa plataforma é
+    /// descartado (é dado oficial, recuperável) e os jogos dela voltam a "não possuído" até a próxima importação.
+    /// Outras plataformas, listas, metas e anotações não são tocadas.
     /// </summary>
-    public async Task SetOwnerSteamIdAsync(ulong steamId, CancellationToken ct = default)
+    public async Task SetOwnerAsync(Platform platform, string accountId, CancellationToken ct = default)
     {
-        var current = await GetOwnerSteamIdAsync(ct);
-        if (current == steamId) return;
+        ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
+        var current = await GetOwnerAsync(platform, ct);
+        if (current == accountId) return;
 
         await using var c = await factory.OpenAsync(ct);
         await using var tx = await c.BeginTransactionAsync(ct);
         if (current is not null)
         {
-            await c.ExecuteAsync(new CommandDefinition("DELETE FROM player_achievements", transaction: tx, cancellationToken: ct));
             await c.ExecuteAsync(new CommandDefinition(
-                "UPDATE games SET is_owned = 0, player_synced_utc = NULL, player_synced_playtime = NULL, playtime_minutes = 0, last_played_utc = NULL, last_error = NULL, availability = CASE WHEN availability = @none THEN availability ELSE @notSynced END",
-                new { none = (int)DataAvailability.NoAchievements, notSynced = (int)DataAvailability.NotSynced }, tx, cancellationToken: ct));
+                "DELETE FROM player_achievements WHERE app_id BETWEEN @first AND @last",
+                new { first = platform.FirstId(), last = platform.LastId() }, tx, cancellationToken: ct));
+            await c.ExecuteAsync(new CommandDefinition(
+                "UPDATE games SET is_owned = 0, player_synced_utc = NULL, player_synced_playtime = NULL, playtime_minutes = 0, last_played_utc = NULL, last_error = NULL, availability = CASE WHEN availability = @none THEN availability ELSE @notSynced END WHERE platform = @platform",
+                new { platform = (int)platform, none = (int)DataAvailability.NoAchievements, notSynced = (int)DataAvailability.NotSynced }, tx, cancellationToken: ct));
         }
         await c.ExecuteAsync(new CommandDefinition(
-            "INSERT INTO settings(key, value) VALUES ('catalog_owner_steam_id', @value) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-            new { value = steamId.ToString() }, tx, cancellationToken: ct));
+            "INSERT INTO settings(key, value) VALUES (@key, @value) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            new { key = OwnerKey(platform), value = accountId }, tx, cancellationToken: ct));
         await tx.CommitAsync(ct);
     }
+
+    // A chave da Steam é a de sempre, para bancos antigos continuarem reconhecendo o dono.
+    private static string OwnerKey(Platform platform) => platform switch
+    {
+        Platform.Steam => "catalog_owner_steam_id",
+        _ => $"catalog_owner_{platform.ToString().ToLowerInvariant()}",
+    };
 
     public async Task<GameProgress> GetProgressAsync(long appId, CancellationToken ct = default)
     {
@@ -231,7 +312,7 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
         await using var c = await factory.OpenAsync(ct);
         // Conquista sem linha em player_achievements = desconhecida (não pendente).
         var rows = await c.QueryAsync<LibraryRow>(new CommandDefinition($"""
-            SELECT g.app_id AS AppId, g.name AS Name, g.icon_hash AS IconHash, g.playtime_minutes AS PlaytimeMinutes,
+            SELECT g.app_id AS AppId, g.platform AS Platform, g.image_url AS ImageUrl, g.name AS Name, g.icon_hash AS IconHash, g.playtime_minutes AS PlaytimeMinutes,
                    g.last_played_utc AS LastPlayedUtc, g.is_owned AS IsOwned, g.availability AS Availability,
                    g.player_synced_utc AS PlayerSyncedUtc, g.last_error AS LastError,
                    COUNT(a.api_name) AS Total,
@@ -254,13 +335,16 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
             return new LibraryGame(
                 r.AppId, r.Name, r.IconHash, (int)r.PlaytimeMinutes, Time.FromUnix(r.LastPlayedUtc), r.IsOwned != 0,
                 (DataAvailability)r.Availability, Time.FromUnix(r.PlayerSyncedUtc), r.LastError, progress,
-                CompletionOutlook.From(progress, r.RarestRemaining, (int)r.RemainingWithoutRarity));
+                CompletionOutlook.From(progress, r.RarestRemaining, (int)r.RemainingWithoutRarity),
+                (Platform)r.Platform, r.ImageUrl);
         }).ToList();
     }
 
     private sealed class LibraryRow
     {
         public long AppId { get; init; }
+        public long Platform { get; init; }
+        public string? ImageUrl { get; init; }
         public string Name { get; init; } = "";
         public string? IconHash { get; init; }
         public long PlaytimeMinutes { get; init; }

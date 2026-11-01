@@ -20,9 +20,15 @@ public sealed record LibraryItem(
     Viability Viability,
     string? ViabilityLabel,
     string? ViabilityTooltip,
-    bool IsFavorite)
+    bool IsFavorite,
+    Platform Platform = Platform.Steam,
+    bool ShowPlatform = false)
 {
-    public static LibraryItem From(LibraryGame g, bool isFavorite = false)
+    /// <summary>Linha de baixo do jogo: tempo de jogo, com a plataforma na frente quando há mais de uma.</summary>
+    public string Subtitle => ShowPlatform ? $"{Platform.DisplayName()} · {PlaytimeText}" : PlaytimeText;
+
+    /// <param name="showPlatform">Mostrar a plataforma no subtítulo. Sem valor: só quando o jogo não é da Steam.</param>
+    public static LibraryItem From(LibraryGame g, bool isFavorite = false, bool? showPlatform = null)
     {
         var p = g.Progress;
         var progressText = p.Total switch
@@ -49,7 +55,8 @@ public sealed record LibraryItem(
 
         return new LibraryItem(
             g.AppId, g.Name, g.IconUrl, FormatPlaytime(g.PlaytimeMinutes), progressText,
-            p.Percent ?? 0, p.Total > 0, p.IsComplete, badge, tooltip, g.Outlook.Viability, vLabel, vTooltip, isFavorite);
+            p.Percent ?? 0, p.Total > 0, p.IsComplete, badge, tooltip, g.Outlook.Viability, vLabel, vTooltip, isFavorite,
+            g.Platform, showPlatform ?? g.Platform != Platform.Steam);
     }
 
     public static (string? Label, string? Tooltip) Describe(CompletionOutlook o)
