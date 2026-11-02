@@ -1,3 +1,4 @@
+using AchievementsMP.Core.Domain;
 using AchievementsMP.Core.Progress;
 
 namespace AchievementsMP.Core.Library;
@@ -31,6 +32,8 @@ public sealed record LibraryFilter
     public Viability? MinViability { get; init; }
     /// <summary>Restringe a estes jogos (lista personalizada). Null = todos.</summary>
     public IReadOnlySet<long>? OnlyAppIds { get; init; }
+    /// <summary>Só jogos desta plataforma. Null = todas.</summary>
+    public Platform? Platform { get; init; }
     public LibrarySort Sort { get; init; } = LibrarySort.Name;
 }
 
@@ -42,6 +45,7 @@ public static class LibraryQuery
         var query = games.Where(g =>
             (term.Length == 0 || g.Name.Contains(term, StringComparison.CurrentCultureIgnoreCase))
             && (filter.OnlyAppIds is null || filter.OnlyAppIds.Contains(g.AppId))
+            && (filter.Platform is not { } platform || g.Platform == platform)
             && MatchesStatus(g, filter.Status)
             && (filter.MinViability is not { } min || (g.Outlook.Viability >= min && g.Outlook.Viability != Viability.Done)));
 

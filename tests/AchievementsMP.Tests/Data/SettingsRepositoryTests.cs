@@ -69,4 +69,43 @@ public class SettingsRepositoryTests
 
         Assert.Equal(AppSettings.Default, await new SettingsRepository(db.Factory, new FakeProtector()).LoadAsync());
     }
+    [Fact]
+    public async Task Token_cache_is_stored_encrypted_and_can_be_cleared()
+    {
+        await using var db = await TempDatabase.CreateMigratedAsync();
+        var cache = new SettingsRepository(db.Factory, new FakeProtector()).TokenCache("microsoft");
+        var secret = Encoding.UTF8.GetBytes("refresh-token-muito-secreto");
+
+        await cache.SaveAsync(secret);
+
+        Assert.Equal(secret, await cache.LoadAsync());
+        await using (var c = await db.Factory.OpenAsync())
+        {
+            var raw = await c.QuerySingleAsync<byte[]>("SELECT value FROM settings WHERE key = 'token_cache_microsoft'");
+            Assert.DoesNotContain("refresh-token", Encoding.UTF8.GetString(raw));
+        }
+
+        await cache.SaveAsync(null);
+        Assert.Null(await cache.LoadAsync());
+    }
+
+    [Fact]
+    public async Task Token_cache_from_another_windows_user_reads_as_not_connected()
+    {
+        await using var db = await TempDatabase.CreateMigratedAsync();
+        await using (var c = await db.Factory.OpenAsync())
+            await c.ExecuteAsync("INSERT INTO settings(key, value) VALUES ('token_cache_microsoft', @v)", new { v = new byte[] { 1, 2, 3, 4, 5 } });
+
+        Assert.Null(await new SettingsRepository(db.Factory, new FakeProtector()).TokenCache("microsoft").LoadAsync());
+    }
+
+    [Fact]
+    public async Task Saving_settings_keeps_the_xbox_gamertag()
+    {
+        await using var db = await TempDatabase.CreateMigratedAsync();
+        var repo = new SettingsRepository(db.Factory, new FakeProtector());
+        await repo.SaveAsync(new AppSettings { XboxGamertag = "pablordfs" });
+
+        Assert.Equal("pablordfs", (await repo.LoadAsync()).XboxGamertag);
+    }
 }

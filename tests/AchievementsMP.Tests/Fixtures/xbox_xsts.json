@@ -1,0 +1,6 @@
+{
+  "IssueInstant": "2026-11-01T22:00:00.0000000Z",
+  "NotAfter": "2026-11-02T14:00:00.0000000Z",
+  "Token": "XSTS-TOKEN",
+  "DisplayClaims": { "xui": [{ "gtg": "pablordfs", "xid": "2533274800000000", "uhs": "1234567890", "agg": "Adult", "usr": "234", "utr": "190", "prv": "185 186" }] }
+}

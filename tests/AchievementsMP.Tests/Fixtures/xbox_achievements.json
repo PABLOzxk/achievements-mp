@@ -1,0 +1,50 @@
+{
+  "achievements": [
+    {
+      "id": "1",
+      "serviceConfigId": "00000000-0000-0000-0000-000066574a71",
+      "name": "Primeiro passo",
+      "titleAssociations": [{ "name": "Halo Infinite", "id": 1717113201 }],
+      "progressState": "Achieved",
+      "progression": { "requirements": [], "timeUnlocked": "2026-10-20T20:00:00.1230000Z" },
+      "mediaAssets": [{ "name": "a1", "type": "Icon", "url": "https://images-eds-ssl.xboxlive.com/image?url=a1" }],
+      "platforms": ["Scarlett"],
+      "isSecret": false,
+      "description": "Termine a primeira missão.",
+      "lockedDescription": "Termine a primeira missão.",
+      "productId": "x",
+      "achievementType": "Persistent",
+      "participationType": "Individual",
+      "timeWindow": null,
+      "rewards": [{ "name": null, "description": null, "value": "10", "type": "Gamerscore", "mediaAsset": null, "valueType": "Int" }],
+      "estimatedTime": "00:00:00",
+      "deeplink": "",
+      "isRevoked": false,
+      "rarity": { "currentCategory": "Common", "currentPercentage": 61.2 }
+    },
+    {
+      "id": "2",
+      "name": "Lenda",
+      "progressState": "Achieved",
+      "progression": { "timeUnlocked": "2026-10-20T21:00:00Z" },
+      "mediaAssets": [{ "name": "a2", "type": "Icon", "url": "http://images-eds.xboxlive.com/image?url=a2" }],
+      "isSecret": false,
+      "description": "Termine no Lendário.",
+      "rewards": [{ "value": "20", "type": "Gamerscore", "valueType": "Int" }],
+      "rarity": { "currentCategory": "Rare", "currentPercentage": 3.4 }
+    },
+    {
+      "id": "3",
+      "name": "Conquista secreta",
+      "progressState": "NotStarted",
+      "progression": { "requirements": [], "timeUnlocked": "0001-01-01T00:00:00.0000000Z" },
+      "mediaAssets": [],
+      "isSecret": true,
+      "description": "",
+      "lockedDescription": "Continue jogando para desbloquear.",
+      "rewards": [{ "value": "30", "type": "Gamerscore", "valueType": "Int" }]
+    },
+    { "id": "", "name": "sem id", "progressState": "Achieved" }
+  ],
+  "pagingInfo": { "continuationToken": null, "totalRecords": 3 }
+}

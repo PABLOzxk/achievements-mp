@@ -9,7 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 namespace AchievementsMP.App.ViewModels;
 
 public sealed partial class OverviewViewModel(
-    SteamCatalogRepository catalog, PlannerRepository planner, GoalTracker goals, AchievementsMP.Core.Settings.ISecretStore secrets, TimeProvider time)
+    CatalogRepository catalog, PlannerRepository planner, GoalTracker goals, AchievementsMP.Core.Settings.ISecretStore secrets, TimeProvider time)
     : PageViewModel, IGameOpener
 {
     public override string Title => "Visão geral";
@@ -40,6 +40,7 @@ public sealed partial class OverviewViewModel(
     public override async Task OnNavigatedToAsync()
     {
         var library = await catalog.GetLibraryAsync();
+        var showPlatform = library.Select(g => g.Platform).Distinct().Skip(1).Any();
         GameCount = library.Count;
         UnlockedCount = library.Sum(g => g.Progress.Unlocked);
         CompletedGames = library.Count(g => g.Progress.IsComplete);
@@ -54,7 +55,7 @@ public sealed partial class OverviewViewModel(
             .OrderBy(g => g.Progress.KnownRemaining)
             .ThenByDescending(g => g.Progress.Percent)
             .Take(6)
-            .Select(g => LibraryItem.From(g))
+            .Select(g => LibraryItem.From(g, showPlatform: showPlatform))
             .ToList();
 
         // Mais viáveis: começados, e as que faltam são as mais comuns (raridade da mais rara que falta).
@@ -65,7 +66,7 @@ public sealed partial class OverviewViewModel(
                 Sort = LibrarySort.MostViable,
             })
             .Take(6)
-            .Select(g => LibraryItem.From(g))
+            .Select(g => LibraryItem.From(g, showPlatform: showPlatform))
             .ToList();
         HasViable = MostViable.Count > 0;
 

@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using AchievementsMP.Core.Domain;
 using AchievementsMP.Core.Library;
 using AchievementsMP.Core.Progress;
 using AchievementsMP.Data.Repositories;
@@ -13,7 +14,7 @@ public sealed record ListOption(long? Id, string Name, bool IsFavorites, IComman
     public override string ToString() => Name;
 }
 
-public sealed partial class LibraryViewModel(SteamCatalogRepository catalog, PersonalDataRepository personal, TimeProvider time) : PageViewModel, IGameOpener
+public sealed partial class LibraryViewModel(CatalogRepository catalog, PersonalDataRepository personal, TimeProvider time) : PageViewModel, IGameOpener
 {
     public override string Title => "Minha biblioteca";
     public override string Glyph => "";
@@ -47,6 +48,12 @@ public sealed partial class LibraryViewModel(SteamCatalogRepository catalog, Per
         new(LibrarySort.MostPlayed, "Mais jogados"),
         new(LibrarySort.RecentlyPlayed, "Jogados recentemente"),
     ];
+
+    /// <summary>Só as plataformas que têm jogos na biblioteca, mais "todas".</summary>
+    [ObservableProperty] private IReadOnlyList<Option<Platform?>> _platformOptions = [];
+    [ObservableProperty] private Option<Platform?>? _platformFilter;
+    /// <summary>Filtro e nome da plataforma só aparecem quando há jogos de mais de uma.</summary>
+    [ObservableProperty] private bool _hasSeveralPlatforms;
 
     private IReadOnlyList<LibraryGame> _games = [];
     private ILookup<long, long> _membership = Array.Empty<long>().ToLookup(x => x);
@@ -83,6 +90,7 @@ public sealed partial class LibraryViewModel(SteamCatalogRepository catalog, Per
 
         _games = await catalog.GetLibraryAsync();
         await ReloadListsAsync();
+        ReloadPlatforms();
 
         var withAchievements = _games.Count(g => g.Progress.Total > 0);
         var complete = _games.Count(g => g.Progress.IsComplete);
@@ -97,6 +105,16 @@ public sealed partial class LibraryViewModel(SteamCatalogRepository catalog, Per
     partial void OnStatusChanged(Option<LibraryStatus>? value) => ApplyFilter();
     partial void OnMinViabilityChanged(Option<Viability?>? value) => ApplyFilter();
     partial void OnSortChanged(Option<LibrarySort>? value) => ApplyFilter();
+    partial void OnPlatformFilterChanged(Option<Platform?>? value) => ApplyFilter();
+
+    private void ReloadPlatforms()
+    {
+        var present = Platforms.All.Where(p => _games.Any(g => g.Platform == p)).ToList();
+        HasSeveralPlatforms = present.Count > 1;
+        var current = PlatformFilter?.Value;
+        PlatformOptions = [new(null, "Todas as plataformas"), .. present.Select(p => new Option<Platform?>(p, p.DisplayName()))];
+        PlatformFilter = PlatformOptions.FirstOrDefault(o => o.Value == current) ?? PlatformOptions[0];
+    }
     partial void OnListFilterChanged(ListOption? value)
     {
         IsListSelected = value?.Id is not null;
@@ -113,12 +131,13 @@ public sealed partial class LibraryViewModel(SteamCatalogRepository catalog, Per
             Status = Status?.Value ?? LibraryStatus.All,
             MinViability = MinViability?.Value,
             Sort = Sort?.Value ?? LibrarySort.Name,
+            Platform = HasSeveralPlatforms ? PlatformFilter?.Value : null,
             OnlyAppIds = ListFilter?.Id is { } listId
                 ? _games.Where(g => _membership[g.AppId].Contains(listId)).Select(g => g.AppId).ToHashSet()
                 : null,
         };
         Items = LibraryQuery.Apply(_games, filter)
-            .Select(g => LibraryItem.From(g, _favoritesId is { } fav && _membership[g.AppId].Contains(fav)))
+            .Select(g => LibraryItem.From(g, _favoritesId is { } fav && _membership[g.AppId].Contains(fav), HasSeveralPlatforms))
             .ToList();
         ResultText = Items.Count == _games.Count ? "" : $"{Items.Count} de {_games.Count} jogos";
     }

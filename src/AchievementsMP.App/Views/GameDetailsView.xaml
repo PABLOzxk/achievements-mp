@@ -91,7 +91,7 @@
             <StackPanel Grid.Column="1">
                 <TextBlock Text="{Binding Game.Name}" Style="{StaticResource PageTitle}" TextTrimming="CharacterEllipsis" />
                 <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                    <TextBlock Text="{Binding Game.PlaytimeText}" Style="{StaticResource Hint}" Margin="0,0,12,0" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Game.Subtitle}" Style="{StaticResource Hint}" Margin="0,0,12,0" VerticalAlignment="Center" />
                     <Border Style="{StaticResource ViabilityChip}" DataContext="{Binding Game}" ToolTip="{Binding ViabilityTooltip}">
                         <TextBlock Text="{Binding ViabilityLabel}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
                     </Border>

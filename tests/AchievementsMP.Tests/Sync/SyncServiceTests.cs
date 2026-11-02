@@ -17,7 +17,7 @@ public sealed class SyncServiceTests : IAsyncLifetime
     private readonly FakeClock _clock = new(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
     private readonly List<TimeSpan> _delays = [];
     private SettingsRepository _settings = null!;
-    private SteamCatalogRepository _catalog = null!;
+    private CatalogRepository _catalog = null!;
     private PersonalDataRepository _personal = null!;
     private SyncRunRepository _runs = null!;
 
@@ -25,7 +25,7 @@ public sealed class SyncServiceTests : IAsyncLifetime
     {
         _db = await TempDatabase.CreateMigratedAsync();
         _settings = new SettingsRepository(_db.Factory, new FakeProtector());
-        _catalog = new SteamCatalogRepository(_db.Factory);
+        _catalog = new CatalogRepository(_db.Factory);
         _personal = new PersonalDataRepository(_db.Factory);
         _runs = new SyncRunRepository(_db.Factory);
         await _settings.SaveAsync(new AppSettings { SteamProfile = Me.ToString(), SteamId64 = Me });

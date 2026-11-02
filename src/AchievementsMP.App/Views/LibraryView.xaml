@@ -36,6 +36,8 @@
             <ComboBox Width="190" Margin="0,0,10,10" ItemsSource="{Binding ViabilityOptions}" SelectedItem="{Binding MinViability}" DisplayMemberPath="Label"
                       ToolTip="Viabilidade = raridade da conquista mais rara que falta" />
             <ComboBox Width="220" Margin="0,0,10,10" ItemsSource="{Binding SortOptions}" SelectedItem="{Binding Sort}" DisplayMemberPath="Label" ToolTip="Ordenar por" />
+            <ComboBox Width="190" Margin="0,0,10,10" ItemsSource="{Binding PlatformOptions}" SelectedItem="{Binding PlatformFilter}" DisplayMemberPath="Label"
+                      ToolTip="Plataforma" Visibility="{Binding HasSeveralPlatforms, Converter={StaticResource BoolToVisibility}}" />
         </WrapPanel>
 
         <!-- Listas -->

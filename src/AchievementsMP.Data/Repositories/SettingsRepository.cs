@@ -57,6 +57,30 @@ public sealed class SettingsRepository(SqliteConnectionFactory factory, ISecretP
         await WriteAsync(ApiKeyKey, protector.Protect(Encoding.UTF8.GetBytes(apiKey.Trim())), ct);
     }
 
+    /// <summary>Guarda de logins de outras plataformas, cifrada como a chave da Steam.</summary>
+    public ITokenCacheStore TokenCache(string name) => new ProtectedBlob(this, protector, "token_cache_" + name);
+
+    private sealed class ProtectedBlob(SettingsRepository owner, ISecretProtector protector, string key) : ITokenCacheStore
+    {
+        public async Task<byte[]?> LoadAsync(CancellationToken ct = default)
+        {
+            var cipher = await owner.ReadAsync(key, ct);
+            if (cipher is null) return null;
+            try
+            {
+                return protector.Unprotect(cipher);
+            }
+            catch (System.Security.Cryptography.CryptographicException)
+            {
+                // Banco de outro usuário do Windows: é como não estar conectado.
+                return null;
+            }
+        }
+
+        public Task SaveAsync(byte[]? data, CancellationToken ct = default) =>
+            data is null || data.Length == 0 ? owner.DeleteAsync(key, ct) : owner.WriteAsync(key, protector.Protect(data), ct);
+    }
+
     private async Task<byte[]?> ReadAsync(string key, CancellationToken ct)
     {
         await using var c = await factory.OpenAsync(ct);

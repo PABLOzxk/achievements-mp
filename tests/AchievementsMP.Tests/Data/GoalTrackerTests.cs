@@ -12,10 +12,10 @@ public class GoalTrackerTests
     private static readonly TimeZoneInfo Utc = TimeZoneInfo.Utc;
     private const long Hades = 1145360;
 
-    private static async Task<(TempDatabase Db, SteamCatalogRepository Steam, PlannerRepository Planner, GoalTracker Tracker)> SetupAsync()
+    private static async Task<(TempDatabase Db, CatalogRepository Steam, PlannerRepository Planner, GoalTracker Tracker)> SetupAsync()
     {
         var db = await TempDatabase.CreateMigratedAsync();
-        var steam = new SteamCatalogRepository(db.Factory);
+        var steam = new CatalogRepository(db.Factory);
         var planner = new PlannerRepository(db.Factory);
         await steam.UpsertLibraryAsync([new Game(Hades, "Hades", null, 300, null, true)], Now.AddDays(-30), isCompleteLibrary: true);
         await steam.UpsertSchemaAsync(Hades,

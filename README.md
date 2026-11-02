@@ -1,7 +1,8 @@
 # Achievements MP
 
-App Windows para acompanhar conquistas da Steam: biblioteca, progresso por jogo, metas e um planejador de 100%.
-Tudo fica num banco SQLite no seu computador; a Steam é consultada só para leitura. Não é afiliado à Valve nem à Steam.
+App Windows para acompanhar conquistas da Steam e do Xbox: biblioteca, progresso por jogo, metas e um planejador de 100%.
+Tudo fica num banco SQLite no seu computador; a Steam e o Xbox são consultados só para leitura. Não é afiliado à Valve,
+à Steam, à Microsoft nem ao Xbox.
 
 ## Instalar
 
@@ -20,6 +21,19 @@ Sem instalar: o `AchievementsMP.App-win-Portable.zip` roda de qualquer pasta, ma
 - **Desinstalar** (Configurações do Windows → Aplicativos) remove o programa, mas mantém seus dados em
   `%LocalAppData%\AchievementsMP`. Apague essa pasta se quiser remover tudo.
 - **Privacidade:** veja [PRIVACIDADE.md](PRIVACIDADE.md). Não há servidor do app nem telemetria.
+
+## Xbox (opcional)
+
+Em **Configurações → Xbox → Conectar Xbox**, o navegador abre o login da Microsoft. Depois disso, cada sincronização
+lê também os jogos de Xbox One, Series e PC (Game Pass, Microsoft Store) com conquistas, data e raridade, e eles entram
+na mesma biblioteca, metas e planejador, com o nome "Xbox" na linha do jogo e um filtro de plataforma.
+
+- Não existe API oficial da Microsoft para apps de terceiros lerem conquistas. O app usa os mesmos serviços do app do
+  Xbox, com o login oficial da Microsoft (MSAL). Funciona hoje, mas a Microsoft pode fechar essa porta sem aviso.
+- O Xbox não informa tempo de jogo: aparece a data em que você jogou por último.
+- Jogos de Xbox 360 aparecem, mas as conquistas deles ainda não são lidas.
+- A conexão depende do registro do app na Microsoft (`XboxApp.ClientId`). Sem ele, o cartão do Xbox avisa que a
+  conexão não está disponível naquela versão.
 
 ## Estado atual: as 5 fases do plano concluídas
 
@@ -124,6 +138,7 @@ src/
   AchievementsMP.Core    Domínio puro: jogos, conquistas, progresso, configurações. Sem dependências.
   AchievementsMP.Data    SQLite (Microsoft.Data.Sqlite + Dapper), migrações e repositórios.
   AchievementsMP.Steam   Steam Web API atrás de ISteamWebApi. Parser separado do HTTP.
+  AchievementsMP.Xbox    Login da Microsoft (MSAL) e serviços do Xbox atrás de IXboxLiveApi. Parser separado do HTTP.
   AchievementsMP.Sync    Sincronização incremental e a verificação do guia de configuração.
   AchievementsMP.App     WPF (MVVM com CommunityToolkit.Mvvm). Só esta camada depende do Windows.
 tests/
@@ -138,6 +153,7 @@ tests/
 - **Sem duplicatas.** Chaves naturais (`app_id`, `app_id + api_name`) e upserts idempotentes.
 - **Dado ausente não vira pendente.** Conquista sem estado conhecido é `Unknown`. O percentual é um piso e `IsExact` diz se pode ser exibido como definitivo.
 - **Resposta vazia da biblioteca = perfil privado**, não "biblioteca vazia". Ela nunca marca seus jogos como não possuídos.
+- **Uma plataforma não mexe na outra.** Cada jogo tem `platform` (0 Steam, 1 Xbox, 2 PlayStation) e um número interno numa faixa própria (na Steam, o AppId). Sincronizar, trocar de conta ou desconectar uma plataforma só toca os jogos dela.
 - **Migrações seguras.** Backup antes de alterar um banco existente, cada migração numa transação, recusa abrir banco de versão mais nova.
 - **A chave da API não vaza.** Cifrada com DPAPI (usuário atual), nunca incluída em mensagens de erro ou logs, e o cliente HTTP não segue redirecionamentos (a chave vai na URL e não pode ser levada para outro endereço).
 - **Banco danificado tem saída.** Se o arquivo não abre, o app oferece restaurar um backup ou começar do zero, e guarda o arquivo danificado em `backups\` em vez de apagar.

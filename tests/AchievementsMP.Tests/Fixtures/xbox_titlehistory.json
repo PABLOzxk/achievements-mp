@@ -1,0 +1,48 @@
+{
+  "xuid": "2533274800000000",
+  "titles": [
+    {
+      "titleId": "1717113201",
+      "pfn": "Microsoft.254428597CFE2_8wekyb3d8bbwe",
+      "bingId": null,
+      "windowsPhoneProductId": null,
+      "name": "Halo Infinite",
+      "type": "Game",
+      "devices": ["XboxSeries", "XboxOne", "PC"],
+      "displayImage": "http://store-images.s-microsoft.com/image/apps.21536.13727851868390641.c9cc5f66-aff8-406c-af6b-440838730be0.d205e025-5444-4eb1-ae46-571ae6895928",
+      "mediaItemType": "Application",
+      "modernTitleId": "1717113201",
+      "isBundle": false,
+      "achievement": { "currentAchievements": 2, "totalAchievements": 3, "currentGamerscore": 30, "totalGamerscore": 60, "progressPercentage": 50, "sourceVersion": 2 },
+      "titleHistory": { "lastTimePlayed": "2026-10-20T21:14:05.3330000Z", "visible": true, "canHide": false }
+    },
+    {
+      "titleId": "327370029",
+      "name": "Netflix",
+      "type": "App",
+      "devices": ["XboxOne"],
+      "displayImage": "https://store-images.s-microsoft.com/image/netflix",
+      "titleHistory": { "lastTimePlayed": "2026-10-21T10:00:00Z", "visible": true }
+    },
+    {
+      "titleId": "1297287142",
+      "name": "Fable II",
+      "type": "Game",
+      "devices": ["Xbox360"],
+      "displayImage": "https://store-images.s-microsoft.com/image/fable2",
+      "achievement": { "currentAchievements": 10, "totalAchievements": 50, "currentGamerscore": 200, "totalGamerscore": 1000, "progressPercentage": 20, "sourceVersion": 1 },
+      "titleHistory": { "lastTimePlayed": "2024-05-01T12:00:00Z", "visible": true }
+    },
+    {
+      "titleId": "1828326430",
+      "name": "Minecraft Launcher",
+      "type": "Game",
+      "devices": ["PC"],
+      "displayImage": null,
+      "achievement": { "currentAchievements": 0, "totalAchievements": 0, "currentGamerscore": 0, "totalGamerscore": 0, "progressPercentage": 0, "sourceVersion": 0 },
+      "titleHistory": { "lastTimePlayed": "2026-01-02T03:04:05Z", "visible": true }
+    },
+    { "titleId": "abc", "name": "ID inválido", "type": "Game" },
+    { "titleId": "123", "name": "", "type": "Game" }
+  ]
+}

@@ -10,7 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 namespace AchievementsMP.App.ViewModels;
 
 /// <summary>Aba "Metas" do planejador: lista das metas e formulário de meta nova.</summary>
-public sealed partial class GoalsViewModel(PlannerRepository planner, GoalTracker tracker, SteamCatalogRepository catalog, TimeProvider time)
+public sealed partial class GoalsViewModel(PlannerRepository planner, GoalTracker tracker, CatalogRepository catalog, TimeProvider time)
     : ObservableObject
 {
     public IReadOnlyList<Option<GoalKind>> KindOptions { get; } =

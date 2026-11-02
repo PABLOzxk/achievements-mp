@@ -163,7 +163,7 @@ public class PlannerRepositoryTests
     public async Task Counts_unlocks_inside_the_window_only()
     {
         await using var db = await TempDatabase.CreateMigratedAsync();
-        var steam = new SteamCatalogRepository(db.Factory);
+        var steam = new CatalogRepository(db.Factory);
         await steam.UpsertLibraryAsync([G(Hades, "Hades"), G(Portal, "Portal 2")], T0, isCompleteLibrary: true);
         await steam.UpsertSchemaAsync(Hades, [A(Hades, "a"), A(Hades, "b"), A(Hades, "c"), A(Hades, "d")], T0);
         await steam.UpsertSchemaAsync(Portal, [A(Portal, "p")], T0);
@@ -186,7 +186,7 @@ public class PlannerRepositoryTests
     public async Task Flagged_pending_lists_only_locked_missable_or_high_priority_missable_first()
     {
         await using var db = await TempDatabase.CreateMigratedAsync();
-        var steam = new SteamCatalogRepository(db.Factory);
+        var steam = new CatalogRepository(db.Factory);
         await steam.UpsertLibraryAsync([G(Hades, "Hades")], T0, isCompleteLibrary: true);
         await steam.UpsertSchemaAsync(Hades, [A(Hades, "perdivel"), A(Hades, "alta"), A(Hades, "feita"), A(Hades, "normal"), A(Hades, "semdados")], T0);
         await steam.ApplyPlayerStatesAsync(Hades,

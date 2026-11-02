@@ -62,7 +62,14 @@ public class ViewSmokeTests
         var library = services.GetRequiredService<LibraryViewModel>();
         await library.OnNavigatedToAsync();
         Render(new LibraryView(), library);
-        Assert.Equal(2, library.Items.Count);
+        Assert.Equal(3, library.Items.Count);
+        // Com jogos de duas plataformas aparecem o filtro e o nome da plataforma em cada jogo.
+        Assert.True(library.HasSeveralPlatforms);
+        Assert.Equal("Xbox · Tempo de jogo não informado", library.Items.Single(i => i.Name == "Halo Infinite").Subtitle);
+        library.PlatformFilter = library.PlatformOptions.Single(o => o.Value == Platform.Xbox);
+        Render(new LibraryView(), library);
+        Assert.Equal(["Halo Infinite"], library.Items.Select(i => i.Name));
+        library.PlatformFilter = library.PlatformOptions[0];
 
         var details = services.GetRequiredService<GameDetailsViewModel>();
         details.Show(Hades);
@@ -247,12 +254,13 @@ public class ViewSmokeTests
 
     private static async Task SeedAsync(SqliteConnectionFactory factory)
     {
-        var steam = new SteamCatalogRepository(factory);
+        var steam = new CatalogRepository(factory);
         var planner = new PlannerRepository(factory);
         var personal = new PersonalDataRepository(factory);
 
         await steam.UpsertLibraryAsync(
             [new Game(Hades, "Hades", null, 336, T0, true), new Game(Portal, "Portal 2", null, 600, T0.AddDays(-30), true)], T0, isCompleteLibrary: true);
+        await steam.UpsertPlatformLibraryAsync(Platform.Xbox, [new PlatformGame("1717113201", "Halo Infinite", null, 0, null)], T0, isCompleteLibrary: true);
 
         string[] hades = ["feita", "rara", "perdivel", "rapida", "longa", "semclasse", "alta"];
         string[] unlocked = ["feita", "rara"];

@@ -4,7 +4,8 @@ public static class Schema
 {
     /// <summary>
     /// Regras do desenho:
-    /// - Tabelas da Steam (games, achievements, player_achievements, achievement_global_stats) são reescritas pela sincronização.
+    /// - Tabelas oficiais (games, achievements, player_achievements, achievement_global_stats) são reescritas pela sincronização,
+    ///   cada plataforma só nos seus próprios jogos (games.platform).
     /// - Tabelas pessoais (user_lists, goals, plan_tasks, achievement_notes, achievement_plans, guides) não têm chave estrangeira com cascata
     ///   para as tabelas da Steam, então nada que a sincronização faça pode apagá-las.
     /// - Jogos e conquistas nunca são apagados pela sincronização; são marcados (is_owned = 0, is_removed = 1).
@@ -166,6 +167,18 @@ public static class Schema
 
             -- Contagem de desbloqueios por período (metas semanais/diárias).
             CREATE INDEX ix_player_achievements_unlocked ON player_achievements(unlocked_utc) WHERE state = 2;
+            """),
+
+        new(4, "platforms", """
+            -- platform: 0 Steam, 1 Xbox, 2 PlayStation. Tudo que já existe é da Steam.
+            -- Na Steam app_id é o AppId. Nas outras plataformas app_id é um número interno numa faixa própria
+            -- (Platforms.FirstId) e o ID original, que é texto, fica em external_id.
+            ALTER TABLE games ADD COLUMN platform INTEGER NOT NULL DEFAULT 0;
+            ALTER TABLE games ADD COLUMN external_id TEXT;
+            -- Imagem completa do jogo, para plataformas que não usam icon_hash.
+            ALTER TABLE games ADD COLUMN image_url TEXT;
+            CREATE UNIQUE INDEX ux_games_platform_external ON games(platform, external_id) WHERE external_id IS NOT NULL;
+            CREATE INDEX ix_games_platform ON games(platform);
             """),
     ];
 

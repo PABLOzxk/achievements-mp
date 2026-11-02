@@ -34,7 +34,7 @@ public sealed record AchievementItem(
     {
         var unlocked = a.State == UnlockState.Unlocked;
         var description = a.Description
-            ?? (a.Hidden ? "Conquista oculta: a Steam não mostra a descrição até você desbloquear." : "Sem descrição.");
+            ?? (a.Hidden ? "Conquista oculta: a descrição só aparece depois que você desbloquear." : "Sem descrição.");
         var state = a.State switch
         {
             UnlockState.Unlocked when a.UnlockedAtUtc is { } at => $"Desbloqueada em {at.ToLocalTime():dd/MM/yyyy}",
@@ -59,7 +59,7 @@ public sealed record AchievementItem(
         percent is { } p ? $"{LibraryItem.FormatPercent(p)} dos jogadores" : "Raridade desconhecida");
 }
 
-public sealed partial class GameDetailsViewModel(SteamCatalogRepository catalog) : PageViewModel
+public sealed partial class GameDetailsViewModel(CatalogRepository catalog) : PageViewModel
 {
     public override string Title => "Detalhes do jogo";
     public override string Glyph => "";
@@ -122,7 +122,7 @@ public sealed partial class GameDetailsViewModel(SteamCatalogRepository catalog)
         var p = game.Progress;
         Headline = p.Total switch
         {
-            0 => "Este jogo não tem conquistas na Steam.",
+            0 => $"Este jogo não tem conquistas {game.Platform.InName()}.",
             _ when p.IsComplete => $"Completo: {p.Total} de {p.Total} conquistas.",
             _ => $"Faltam {p.KnownRemaining} de {p.Total} conquistas"
                  + (game.Outlook.RarestRemainingPercent is { } r ? $" · a mais rara que falta foi obtida por {LibraryItem.FormatPercent(r)} dos jogadores" : "")

@@ -15,6 +15,7 @@ using AchievementsMP.Data.Repositories;
 using AchievementsMP.Steam;
 using AchievementsMP.Steam.Http;
 using AchievementsMP.Sync;
+using AchievementsMP.Xbox;
 using Microsoft.Extensions.DependencyInjection;
 using Velopack;
 
@@ -97,7 +98,7 @@ public partial class App : Application
         services.AddSingleton<SettingsRepository>();
         services.AddSingleton<ISettingsStore>(sp => sp.GetRequiredService<SettingsRepository>());
         services.AddSingleton<ISecretStore>(sp => sp.GetRequiredService<SettingsRepository>());
-        services.AddSingleton<SteamCatalogRepository>();
+        services.AddSingleton<CatalogRepository>();
         services.AddSingleton<PersonalDataRepository>();
         services.AddSingleton<PlannerRepository>();
         services.AddSingleton<ProfileRepository>();
@@ -115,9 +116,15 @@ public partial class App : Application
             return new SteamWebApiClient(SteamWebApiClient.CreateHttpClient($"AchievementsMP/{AppVersion}"), secrets.GetSteamApiKeyAsync);
         });
 
+        services.AddSingleton<IXboxLiveApi>(_ => new XboxLiveClient(XboxLiveClient.CreateHttpClient($"AchievementsMP/{AppVersion}")));
+        services.AddSingleton<IXboxSignIn>(sp => new MsalXboxSignIn(XboxApp.ClientId, sp.GetRequiredService<SettingsRepository>().TokenCache("microsoft")));
+        services.AddSingleton(sp => new XboxSyncService(sp.GetRequiredService<IXboxSignIn>(), sp.GetRequiredService<IXboxLiveApi>(),
+            sp.GetRequiredService<ISettingsStore>(), sp.GetRequiredService<CatalogRepository>(), sp.GetRequiredService<SyncRunRepository>(),
+            sp.GetRequiredService<TimeProvider>()));
+        services.AddSingleton<XboxAccountViewModel>();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton(sp => new SyncService(
-            sp.GetRequiredService<ISteamWebApi>(), sp.GetRequiredService<ISettingsStore>(), sp.GetRequiredService<SteamCatalogRepository>(),
+            sp.GetRequiredService<ISteamWebApi>(), sp.GetRequiredService<ISettingsStore>(), sp.GetRequiredService<CatalogRepository>(),
             sp.GetRequiredService<SyncRunRepository>(), sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<SyncCoordinator>();
         services.AddSingleton(sp => new SetupChecker(sp.GetRequiredService<ISteamWebApi>()));

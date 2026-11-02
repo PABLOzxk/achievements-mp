@@ -114,7 +114,7 @@
                                        Visibility="{Binding IsFavorite, Converter={StaticResource BoolToVisibility}}" />
                             <TextBlock Text="{Binding Name}" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
-                        <TextBlock Text="{Binding PlaytimeText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                        <TextBlock Text="{Binding Subtitle}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                     <Border Grid.Column="2" Style="{StaticResource Badge}" Margin="0,0,12,0" ToolTip="{Binding BadgeTooltip}">
                         <Border.Visibility>

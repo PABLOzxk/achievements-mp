@@ -17,14 +17,14 @@ public sealed class SyncService
 {
     private readonly ISteamWebApi _steam;
     private readonly ISettingsStore _settings;
-    private readonly SteamCatalogRepository _catalog;
+    private readonly CatalogRepository _catalog;
     private readonly SyncRunRepository _runs;
     private readonly TimeProvider _time;
     private readonly SyncOptions _options;
     private readonly Func<TimeSpan, CancellationToken, Task> _delay;
     private int _running;
 
-    public SyncService(ISteamWebApi steam, ISettingsStore settings, SteamCatalogRepository catalog, SyncRunRepository runs,
+    public SyncService(ISteamWebApi steam, ISettingsStore settings, CatalogRepository catalog, SyncRunRepository runs,
         TimeProvider time, SyncOptions? options = null, Func<TimeSpan, CancellationToken, Task>? delay = null)
     {
         _steam = steam;
