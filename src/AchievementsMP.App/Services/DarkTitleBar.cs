@@ -4,7 +4,9 @@ using System.Windows.Interop;
 
 namespace AchievementsMP.App.Services;
 
-/// <summary>Pede ao Windows 10 (20H1+) / 11 a barra de título escura. Em versões antigas, simplesmente não tem efeito.</summary>
+/// <summary>
+/// Pede ao Windows 10 (20H1+) / 11 a barra de título escura (clara no tema claro). Em versões antigas, simplesmente não tem efeito.
+/// </summary>
 internal static partial class DarkTitleBar
 {
     private const int DwmwaUseImmersiveDarkMode = 20;
@@ -17,7 +19,7 @@ internal static partial class DarkTitleBar
         try
         {
             var hwnd = new WindowInteropHelper(window).Handle;
-            var enabled = 1;
+            var enabled = ThemeManager.Current.IsLight ? 0 : 1;
             _ = DwmSetWindowAttribute(hwnd, DwmwaUseImmersiveDarkMode, ref enabled, sizeof(int));
         }
         catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)

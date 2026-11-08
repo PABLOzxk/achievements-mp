@@ -35,6 +35,8 @@ Sem instalar: o `AchievementsMP.App-win-Portable.zip` roda de qualquer pasta, ma
 | Metas com progresso automático (100%, conquista, N por dia/semana) | |
 | Guia de primeira configuração que confere perfil, chave e privacidade | |
 | Perfil na barra lateral: foto e nome da Steam, que você pode trocar por qualquer imagem e nome | |
+| Temas do app em "Seu perfil": Padrão, Preto, Grafite, Roxo, Meia-noite, Carmesim e Claro | |
+| Troféu dourado e barra dourada nos jogos em 100% | |
 | Backup diário numa pasta escolhida e restauração com conferência | |
 | Instalador e atualização automática pelas Releases do GitHub (Velopack) | |
 | Revisão de segurança ([SEGURANCA.md](SEGURANCA.md)) e recuperação de banco danificado | |

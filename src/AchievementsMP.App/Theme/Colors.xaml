@@ -1,6 +1,9 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- Paleta inspirada no cliente Steam. -->
+    <!--
+        Paleta inspirada no cliente Steam: é o tema "Padrão". Os outros temas (Services/Themes.cs) trocam estas mesmas
+        chaves antes da primeira janela abrir; chave nova aqui precisa entrar lá também.
+    -->
     <Color x:Key="WindowColor">#FF171A21</Color>
     <Color x:Key="SurfaceColor">#FF1B2838</Color>
     <Color x:Key="CardColor">#FF202D39</Color>
@@ -35,6 +38,17 @@
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" />
     <SolidColorBrush x:Key="RareBrush" Color="{StaticResource RareColor}" />
     <SolidColorBrush x:Key="GoldBrush" Color="{StaticResource GoldColor}" />
+
+    <!-- Camadas sobre o fundo (passar o mouse, clicar, chip neutro, barra de rolagem): brancas aqui, pretas no tema claro. -->
+    <SolidColorBrush x:Key="HoverOverlayBrush" Color="#14FFFFFF" />
+    <SolidColorBrush x:Key="PressedOverlayBrush" Color="#1FFFFFFF" />
+    <SolidColorBrush x:Key="NeutralChipBrush" Color="#22FFFFFF" />
+    <SolidColorBrush x:Key="ScrollThumbBrush" Color="#33FFFFFF" />
+    <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#66FFFFFF" />
+    <SolidColorBrush x:Key="SelectedNavBrush" Color="#1F66C0F4" />
+    <SolidColorBrush x:Key="PrimaryButtonForegroundBrush" Color="{StaticResource TextPrimaryColor}" />
+
+    <BitmapImage x:Key="LogoImage" UriSource="pack://application:,,,/AchievementsMP;component/Assets/logo.png" />
 
     <!-- Fundo das conquistas desbloqueadas nos detalhes do jogo: verde, e roxo nas raras. Mais forte à esquerda. -->
     <LinearGradientBrush x:Key="UnlockedRowBrush" StartPoint="0,0" EndPoint="1,0">

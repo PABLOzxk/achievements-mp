@@ -5,7 +5,8 @@ namespace AchievementsMP.Core.Profile;
 /// A escolha dele vale sobre a da Steam, e "voltar para a da Steam" é só apagar a escolha.
 /// </summary>
 /// <param name="CustomAvatar">Foto escolhida, já reduzida pelo app (PNG quadrado). Fica no banco, então entra no backup.</param>
-public sealed record UserProfile(string? SteamName, string? SteamAvatarUrl, string? CustomName, byte[]? CustomAvatar)
+/// <param name="Theme">Id do tema do app escolhido; nulo = padrão.</param>
+public sealed record UserProfile(string? SteamName, string? SteamAvatarUrl, string? CustomName, byte[]? CustomAvatar, string? Theme = null)
 {
     /// <summary>Mesmo limite de nome da Steam.</summary>
     public const int MaxNameLength = 32;

@@ -45,6 +45,16 @@ public class ViewSmokeTests
         var app = new AchievementsMP.App.App();
         app.InitializeComponent();
 
+        // Tema: o CI roda este teste uma vez por tema (AMP_UI_THEME). Aplicado no mesmo ponto em que o app aplica,
+        // antes de qualquer janela; as imagens das telas ganham o nome do tema.
+        var colors = app.Resources.MergedDictionaries.Single(d => d.Source.OriginalString.EndsWith("Colors.xaml"));
+        foreach (var key in ThemeManager.Resources(ThemeCatalog.Find("claro")).Keys)
+            Assert.True(colors.Contains(key), $"Theme/Colors.xaml não tem a chave {key}, que os temas trocam");
+        var theme = ThemeCatalog.Find(Environment.GetEnvironmentVariable("AMP_UI_THEME"));
+        ThemeManager.Apply(app.Resources, theme);
+        Assert.Equal(theme.Card, ((SolidColorBrush)app.FindResource("CardBrush")).Color);
+        _snapshotSuffix = theme == ThemeCatalog.Default ? "" : "-" + theme.Id;
+
         var paths = new AppPaths(Path.Combine(Path.GetTempPath(), "amp-ui-tests", Guid.NewGuid().ToString("N")));
         var (factory, migration, _) = await AppDatabase.InitializeAsync(paths);
         await SeedAsync(factory);
@@ -253,7 +263,25 @@ public class ViewSmokeTests
         Snapshot((FrameworkElement)window.Content, "planejador", new Size(1600, 900));
         var snapshotEditor = new ProfileEditorViewModel(await profiles.LoadAsync(), profiles, shell);
         var snapshotEditorWindow = new ProfileEditorWindow(snapshotEditor);
-        Snapshot((FrameworkElement)snapshotEditorWindow.Content, "editar-perfil", new Size(464, 420));
+        Snapshot((FrameworkElement)snapshotEditorWindow.Content, "editar-perfil", new Size(464, 680));
+
+        // Tema em "Seu perfil": escolher outro grava e pede reiniciar; salvar sem mudar não pede.
+        var themeEditor = new ProfileEditorViewModel(await profiles.LoadAsync(), profiles, shell);
+        Assert.Equal(ThemeCatalog.Default.Id, themeEditor.SelectedTheme.Id);
+        Assert.Equal(ThemeCatalog.All.Count, themeEditor.Themes.Count);
+        themeEditor.SelectedTheme = themeEditor.Themes.Single(t => t.Id == "roxo");
+        Render((FrameworkElement)new ProfileEditorWindow(themeEditor).Content, themeEditor);
+        await themeEditor.SaveCommand.ExecuteAsync(null);
+        Assert.True(themeEditor.ThemeChanged);
+        Assert.Equal("roxo", await profiles.LoadThemeAsync());
+        var sameTheme = new ProfileEditorViewModel(await profiles.LoadAsync(), profiles, shell);
+        Assert.Equal("roxo", sameTheme.SelectedTheme.Id);
+        await sameTheme.SaveCommand.ExecuteAsync(null);
+        Assert.False(sameTheme.ThemeChanged);
+        var backToDefault = new ProfileEditorViewModel(await profiles.LoadAsync(), profiles, shell) { SelectedTheme = ThemeOption.All[0] };
+        await backToDefault.SaveCommand.ExecuteAsync(null);
+        Assert.True(backToDefault.ThemeChanged);
+        Assert.Null(await profiles.LoadThemeAsync());
 
         // Janela de recuperação de banco danificado (aparece antes da principal, com os mesmos estilos).
         var recovery = new DatabaseRecoveryWindow("file is not a database", paths.Backups);
@@ -321,6 +349,8 @@ public class ViewSmokeTests
         await personal.AddGameToListAsync(fav, Hades, T0);
     }
 
+    private static string _snapshotSuffix = "";
+
     private static void Render(FrameworkElement view, object viewModel)
     {
         view.DataContext = viewModel;
@@ -352,7 +382,7 @@ public class ViewSmokeTests
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         Directory.CreateDirectory(folder);
-        using var file = File.Create(Path.Combine(folder, name + ".png"));
+        using var file = File.Create(Path.Combine(folder, name + _snapshotSuffix + ".png"));
         encoder.Save(file);
     }
 

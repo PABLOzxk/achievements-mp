@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
         <Style x:Key="RarityChip" TargetType="Border" BasedOn="{StaticResource Chip}">
-            <Setter Property="Background" Value="#22FFFFFF" />
+            <Setter Property="Background" Value="{StaticResource NeutralChipBrush}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Rarity}" Value="Common"><Setter Property="Background" Value="#33A4D007" /></DataTrigger>
                 <DataTrigger Binding="{Binding Rarity}" Value="Uncommon"><Setter Property="Background" Value="#3366C0F4" /></DataTrigger>
@@ -147,7 +147,7 @@
                                     <Grid>
                                         <Border x:Name="Tint" Background="Transparent" />
                                         <Border x:Name="Accent" Width="3" HorizontalAlignment="Left" Background="Transparent" />
-                                        <Border x:Name="Hover" Background="#14FFFFFF" Visibility="Hidden" />
+                                        <Border x:Name="Hover" Background="{StaticResource HoverOverlayBrush}" Visibility="Hidden" />
                                         <ContentPresenter Margin="12,0" />
                                     </Grid>
                                 </Border>

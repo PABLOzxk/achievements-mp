@@ -27,6 +27,9 @@ public partial class App : Application
 
     private ServiceProvider? _services;
 
+    /// <summary>A janela de recuperação já criou os estilos com as cores padrão: trocar o tema agora misturaria os dois.</summary>
+    private bool _recoveryShown;
+
     [STAThread]
     public static void Main()
     {
@@ -71,6 +74,7 @@ public partial class App : Application
             if (migration.BackupPath is not null)
                 FileLog.Info($"Banco migrado de v{migration.FromVersion} para v{migration.ToVersion}. Backup: {migration.BackupPath}");
             ReportRestore(restore);
+            await ApplyThemeAsync(factory);
 
             _services = ConfigureServices(paths, factory, migration.ToVersion);
             var window = new MainWindow { DataContext = _services.GetRequiredService<MainViewModel>() };
@@ -172,6 +176,7 @@ public partial class App : Application
                 FileLog.Error("Banco local danificado", ex);
                 // A janela de recuperação não é a principal: fechá-la não pode encerrar o app.
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                _recoveryShown = true;
                 var dialog = new DatabaseRecoveryWindow(ex.Message, paths.Backups);
                 dialog.ShowDialog();
                 ShutdownMode = ShutdownMode.OnMainWindowClose;
@@ -190,6 +195,21 @@ public partial class App : Application
                         return null;
                 }
             }
+        }
+    }
+
+    /// <summary>Tema escolhido em "Seu perfil", aplicado antes da janela principal. Falhar aqui só deixa o tema padrão.</summary>
+    private async Task ApplyThemeAsync(SqliteConnectionFactory factory)
+    {
+        if (_recoveryShown)
+            return;
+        try
+        {
+            ThemeManager.Apply(Resources, ThemeCatalog.Find(await new ProfileRepository(factory).LoadThemeAsync()));
+        }
+        catch (Exception ex)
+        {
+            FileLog.Error("Não foi possível aplicar o tema; fica o padrão", ex);
         }
     }
 
