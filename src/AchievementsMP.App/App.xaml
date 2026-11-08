@@ -87,12 +87,21 @@
                 <Setter Property="Visibility" Value="Visible" />
                 <Style.Triggers>
                     <DataTrigger Binding="{Binding Viability}" Value="Unknown"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
-                    <DataTrigger Binding="{Binding Viability}" Value="Done"><Setter Property="Background" Value="#33A4D007" /></DataTrigger>
+                    <!-- 100%: no lugar do chip aparece o troféu (CompletionTrophy). -->
+                    <DataTrigger Binding="{Binding Viability}" Value="Done"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
                     <DataTrigger Binding="{Binding Viability}" Value="High"><Setter Property="Background" Value="#33A4D007" /></DataTrigger>
                     <DataTrigger Binding="{Binding Viability}" Value="Medium"><Setter Property="Background" Value="#3366C0F4" /></DataTrigger>
                     <DataTrigger Binding="{Binding Viability}" Value="Low"><Setter Property="Background" Value="#33E8B339" /></DataTrigger>
                     <DataTrigger Binding="{Binding Viability}" Value="VeryLow"><Setter Property="Background" Value="#33E0523D" /></DataTrigger>
                 </Style.Triggers>
+            </Style>
+
+            <!-- Troféu dourado de jogo 100% (DataContext = LibraryItem). Some nos jogos incompletos. -->
+            <Style x:Key="CompletionTrophy" TargetType="Image">
+                <Setter Property="Source" Value="/Assets/trofeu-100.png" />
+                <Setter Property="RenderOptions.BitmapScalingMode" Value="HighQuality" />
+                <Setter Property="ToolTip" Value="100%: todas as conquistas desbloqueadas" />
+                <Setter Property="Visibility" Value="{Binding IsComplete, Converter={StaticResource BoolToVisibility}}" />
             </Style>
 
             <DataTemplate x:Key="GameRow">
@@ -129,14 +138,15 @@
                     <Border Grid.Column="3" Style="{StaticResource ViabilityChip}" ToolTip="{Binding ViabilityTooltip}">
                         <TextBlock Text="{Binding ViabilityLabel}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
                     </Border>
+                    <Image Grid.Column="3" Style="{StaticResource CompletionTrophy}" Source="/Assets/trofeu-100-pequeno.png" Width="34" Height="34"
+                           HorizontalAlignment="Left" VerticalAlignment="Center" />
                     <StackPanel Grid.Column="4" VerticalAlignment="Center">
                         <DockPanel>
-                            <TextBlock DockPanel.Dock="Right" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
-                                       Text="{Binding Percent, StringFormat={}{0:0}%}"
+                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource GamePercentText}"
                                        Visibility="{Binding ShowBar, Converter={StaticResource BoolToVisibility}}" />
                             <TextBlock Text="{Binding ProgressText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
                         </DockPanel>
-                        <ProgressBar Margin="0,5,0,0" Maximum="100" Value="{Binding Percent, Mode=OneWay}"
+                        <ProgressBar Style="{StaticResource GameProgress}" Margin="0,5,0,0" Maximum="100" Value="{Binding Percent, Mode=OneWay}"
                                      Visibility="{Binding ShowBar, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
                 </Grid>

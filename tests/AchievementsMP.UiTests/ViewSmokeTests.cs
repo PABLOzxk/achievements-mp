@@ -101,6 +101,19 @@ public class ViewSmokeTests
         planner.Tasks[0].IsDone = true;
         Render(plannerView, planner);
 
+        // Item de checklist comprido: corta em duas linhas e só ele ganha a dica com o texto inteiro.
+        static TextBlock ChecklistText(string text) => new()
+        {
+            Text = text, Width = 240, FontSize = 13, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis,
+            LineHeight = 18, LineStackingStrategy = LineStackingStrategy.BlockLineHeight, MaxHeight = 36,
+        };
+        var longTask = ChecklistText(string.Join(" ", Enumerable.Repeat("pegar a chave no capítulo dois", 12)));
+        var shortTask = ChecklistText("Zerar uma vez");
+        Render(longTask, new object());
+        Render(shortTask, new object());
+        Assert.True(TrimmedTextToolTip.IsTrimmed(longTask));
+        Assert.False(TrimmedTextToolTip.IsTrimmed(shortTask));
+
         // Checklist da conquista: só aparece nela, e a linha do plano mostra a contagem.
         var gameTaskCount = planner.Tasks.Count;
         planner.Editor.NewTaskTitle = "Matar o chefe sem dano";
@@ -222,6 +235,22 @@ public class ViewSmokeTests
         Render((FrameworkElement)window.Content, main);
         Snapshot((FrameworkElement)window.Content, "janela", new Size(1600, 900));
         Snapshot((FrameworkElement)window.Content, "janela-minima", new Size(944, 540));
+
+        // Jogo 100% (troféu e barra dourada) e checklist com texto longo, para conferir no artefato "telas" do CI.
+        planner.IsGoalsTab = false;
+        main.CurrentPage = library;
+        Render((FrameworkElement)window.Content, main);
+        Snapshot((FrameworkElement)window.Content, "biblioteca", new Size(1600, 900));
+        details.Show(Portal);
+        await details.OnNavigatedToAsync();
+        Assert.True(details.Game!.IsComplete);
+        Assert.Equal("100%", details.Game.PercentText);
+        main.CurrentPage = details;
+        Render((FrameworkElement)window.Content, main);
+        Snapshot((FrameworkElement)window.Content, "detalhes-100", new Size(1600, 900));
+        main.CurrentPage = planner;
+        Render((FrameworkElement)window.Content, main);
+        Snapshot((FrameworkElement)window.Content, "planejador", new Size(1600, 900));
         var snapshotEditor = new ProfileEditorViewModel(await profiles.LoadAsync(), profiles, shell);
         var snapshotEditorWindow = new ProfileEditorWindow(snapshotEditor);
         Snapshot((FrameworkElement)snapshotEditorWindow.Content, "editar-perfil", new Size(464, 420));
@@ -275,7 +304,9 @@ public class ViewSmokeTests
         await planner.SavePlanAsync(new AchievementPlan(Hades, "alta", Priority: Priority.High), T0);
         await planner.AddGuideAsync(Hades, null, new Uri("https://example.com/hades-100"), "Guia 100%", T0);
         await planner.AddGuideAsync(Hades, "perdivel", new Uri("https://example.com/perdivel"), null, T0);
-        await planner.AddTaskAsync(Hades, null, "Comprar todos os itens do contrato", T0);
+        // Longo de propósito: no checklist ele quebra em duas linhas, termina em "…" e aparece inteiro na dica.
+        await planner.AddTaskAsync(Hades, null,
+            "Comprar todos os itens do contrato da casa, incluindo o espelho completo, as armas aspectadas e as melhorias do bar, antes de tentar o calor 32 com cada arma", T0);
         var done = await planner.AddTaskAsync(Hades, null, "Zerar uma vez", T0);
         await planner.SetTaskDoneAsync(done, T0.AddDays(1));
 

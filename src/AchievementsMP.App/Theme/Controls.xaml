@@ -252,14 +252,19 @@
         <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusTight}" />
         <Setter Property="Template">
             <Setter.Value>
+                <!-- Grade em vez de StackPanel: o texto recebe a largura que sobra e quebra linha em vez de sair cortado. -->
                 <ControlTemplate TargetType="CheckBox">
-                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                    <Grid Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
                         <Border x:Name="Box" Width="18" Height="18" CornerRadius="3" Background="{StaticResource InputBrush}"
-                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" VerticalAlignment="Center">
+                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" VerticalAlignment="Top">
                             <Path x:Name="Mark" Data="M3,9 L7,13 L15,4" Stroke="{StaticResource WindowBrush}" StrokeThickness="2" Visibility="Collapsed" />
                         </Border>
-                        <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center" />
-                    </StackPanel>
+                        <ContentPresenter Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" />
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Box" Property="Background" Value="{StaticResource AccentBrush}" />
@@ -442,6 +447,46 @@
                             </Trigger.ExitActions>
                         </Trigger>
                     </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Barra de progresso de um jogo (DataContext = LibraryItem): dourada quando o jogo está 100%. -->
+    <Style x:Key="GameProgress" TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsComplete}" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource GoldProgressBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="GamePercentText" TargetType="TextBlock">
+        <Setter Property="Text" Value="{Binding PercentText}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsComplete}" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource GoldBrush}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Dica com texto longo: caixa no tema do app, quebrando linha. -->
+    <Style x:Key="TextToolTip" TargetType="ToolTip">
+        <Setter Property="Background" Value="{StaticResource CardBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="12,9" />
+        <Setter Property="MaxWidth" Value="460" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" CornerRadius="4">
+                        <ContentPresenter />
+                    </Border>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

@@ -17,6 +17,8 @@
     <Page Include="App.xaml" />
     <Resource Include="Assets\app.ico" />
     <Resource Include="Assets\logo.png" />
+    <Resource Include="Assets\trofeu-100.png" />
+    <Resource Include="Assets\trofeu-100-pequeno.png" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AchievementsMP.Core\AchievementsMP.Core.csproj" />

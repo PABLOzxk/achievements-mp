@@ -22,6 +22,15 @@ public sealed record LibraryItem(
     string? ViabilityTooltip,
     bool IsFavorite)
 {
+    /// <summary>Percentual inteiro para exibir. Só mostra 100% quando está completo de verdade (ver <see cref="WholePercent"/>).</summary>
+    public string PercentText => WholePercent(Percent, IsComplete);
+
+    /// <summary>
+    /// Corta em vez de arredondar: 249 de 250 (99,6%) aparece como 99%, não como um 100% que ainda não é.
+    /// </summary>
+    public static string WholePercent(double percent, bool complete) =>
+        complete ? "100%" : Math.Clamp(Math.Floor(percent), 0, 99).ToString("0", CultureInfo.InvariantCulture) + "%";
+
     public static LibraryItem From(LibraryGame g, bool isFavorite = false)
     {
         var p = g.Progress;

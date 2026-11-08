@@ -17,6 +17,7 @@
     <Color x:Key="WarningColor">#FFE8B339</Color>
     <Color x:Key="DangerColor">#FFE0523D</Color>
     <Color x:Key="RareColor">#FFB07CFF</Color>
+    <Color x:Key="GoldColor">#FFF2C14E</Color>
 
     <SolidColorBrush x:Key="WindowBrush" Color="{StaticResource WindowColor}" />
     <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}" />
@@ -33,6 +34,7 @@
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" />
     <SolidColorBrush x:Key="RareBrush" Color="{StaticResource RareColor}" />
+    <SolidColorBrush x:Key="GoldBrush" Color="{StaticResource GoldColor}" />
 
     <!-- Fundo das conquistas desbloqueadas nos detalhes do jogo: verde, e roxo nas raras. Mais forte à esquerda. -->
     <LinearGradientBrush x:Key="UnlockedRowBrush" StartPoint="0,0" EndPoint="1,0">
@@ -55,6 +57,12 @@
     <LinearGradientBrush x:Key="ProgressBrush" StartPoint="0,0" EndPoint="1,0">
         <GradientStop Offset="0" Color="#FF66C0F4" />
         <GradientStop Offset="1" Color="#FFA4D007" />
+    </LinearGradientBrush>
+    <!-- Barra de jogo em 100%: dourada, com brilho no meio como o troféu. -->
+    <LinearGradientBrush x:Key="GoldProgressBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Offset="0" Color="#FFB8801A" />
+        <GradientStop Offset="0.55" Color="#FFFFE08A" />
+        <GradientStop Offset="1" Color="#FFD9A12B" />
     </LinearGradientBrush>
 
     <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
