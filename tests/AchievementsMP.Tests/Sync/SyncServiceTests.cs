@@ -67,7 +67,8 @@ public sealed class SyncServiceTests : IAsyncLifetime
         var result = await CreateService().SyncAsync();
 
         Assert.Equal(SyncOutcome.Succeeded, result.Outcome);
-        Assert.Equal(["owned"], _steam.Calls.ToArray());
+        // "recent" é a busca de jogos emprestados da Família Steam: uma chamada leve por sincronização.
+        Assert.Equal(["owned", "recent"], _steam.Calls.ToArray());
     }
 
     [Fact]

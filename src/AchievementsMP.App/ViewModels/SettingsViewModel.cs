@@ -5,6 +5,7 @@ using AchievementsMP.Core.Domain;
 using AchievementsMP.Core.Settings;
 using AchievementsMP.Data.Backups;
 using AchievementsMP.Steam;
+using AchievementsMP.Sync;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -18,7 +19,8 @@ public sealed record LanguageOption(string Code, string Label)
 
 public sealed partial class SettingsViewModel(
     ISettingsStore store, ISecretStore secrets, ISteamWebApi steam, AppPaths paths,
-    BackupService backups, BackupActions backupActions, AutoBackup autoBackup, IShell shell, AppUpdater updater, StatusInfo status) : PageViewModel
+    BackupService backups, BackupActions backupActions, AutoBackup autoBackup, IShell shell, AppUpdater updater, StatusInfo status,
+    FamilyImporter familyImporter, SyncCoordinator sync) : PageViewModel
 {
     public override string Title => "Configurações";
     public override string Glyph => "";
@@ -298,6 +300,58 @@ public sealed partial class SettingsViewModel(
     }
 
     private void RefreshLastBackup() => LastBackupText = BackupActions.DescribeLast(BackupFolder);
+
+    /// <summary>
+    /// Token da Família Steam colado agora (vindo do PasswordBox). Só existe enquanto a importação roda: nunca é salvo,
+    /// nem vai para o log, e é apagado logo depois, dê certo ou não.
+    /// </summary>
+    [ObservableProperty] private string _familyToken = "";
+    [ObservableProperty] private string _familyStatus = "";
+    [ObservableProperty] private bool _isFamilyError;
+    [ObservableProperty] private bool _isImportingFamily;
+
+    [RelayCommand]
+    private static void OpenFamilyTokenPage() => OpenUrl(SteamAccessToken.SourcePage);
+
+    [RelayCommand]
+    private async Task ImportFamilyAsync()
+    {
+        if (IsImportingFamily) return;
+        if (string.IsNullOrWhiteSpace(FamilyToken))
+        {
+            ShowFamilyResult("Cole primeiro o conteúdo da página do token.", error: true);
+            return;
+        }
+
+        IsImportingFamily = true;
+        ShowFamilyResult("Consultando a Família Steam…", error: false);
+        var pasted = FamilyToken;
+        FamilyToken = "";
+        try
+        {
+            var result = await Task.Run(() => familyImporter.ImportAsync(pasted));
+            // Só a mensagem vai para o log; ela nunca contém o token.
+            FileLog.Info($"Importação da Família Steam: {(result.Ok ? "ok" : "falhou")}. {result.Message}");
+            ShowFamilyResult(result.Message, error: !result.Ok);
+            if (result.Ok && result.Found > 0 && sync.SyncNowCommand.CanExecute(null))
+                _ = sync.SyncNowCommand.ExecuteAsync(null);
+        }
+        catch (Exception ex)
+        {
+            FileLog.Error("Falha inesperada ao importar a Família Steam", ex);
+            ShowFamilyResult("Erro inesperado ao importar. Nada foi alterado; detalhes no log.", error: true);
+        }
+        finally
+        {
+            IsImportingFamily = false;
+        }
+    }
+
+    private void ShowFamilyResult(string message, bool error)
+    {
+        FamilyStatus = message;
+        IsFamilyError = error;
+    }
 
     [RelayCommand]
     private static void OpenApiKeyPage() => OpenUrl("https://steamcommunity.com/dev/apikey");

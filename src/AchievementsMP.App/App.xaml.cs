@@ -113,17 +113,21 @@ public partial class App : Application
         services.AddSingleton<BackupActions>();
         services.AddSingleton<AppUpdater>();
 
-        services.AddSingleton<ISteamWebApi>(sp =>
+        services.AddSingleton(sp =>
         {
             var secrets = sp.GetRequiredService<ISecretStore>();
             return new SteamWebApiClient(SteamWebApiClient.CreateHttpClient($"AchievementsMP/{AppVersion}"), secrets.GetSteamApiKeyAsync);
         });
+        services.AddSingleton<ISteamWebApi>(sp => sp.GetRequiredService<SteamWebApiClient>());
+        services.AddSingleton<ISteamFamilyApi>(sp => sp.GetRequiredService<SteamWebApiClient>());
 
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton(sp => new SyncService(
             sp.GetRequiredService<ISteamWebApi>(), sp.GetRequiredService<ISettingsStore>(), sp.GetRequiredService<SteamCatalogRepository>(),
             sp.GetRequiredService<SyncRunRepository>(), sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<SyncCoordinator>();
+        services.AddSingleton(sp => new FamilyImporter(sp.GetRequiredService<ISteamFamilyApi>(), sp.GetRequiredService<ISettingsStore>(),
+            sp.GetRequiredService<SteamCatalogRepository>(), sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton(sp => new SetupChecker(sp.GetRequiredService<ISteamWebApi>()));
         services.AddSingleton<ProfileRefresher>();
 

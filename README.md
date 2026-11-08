@@ -76,6 +76,7 @@ campanha parecem raras só porque muita gente abandona antes. É um indicador pa
 ## Como a sincronização funciona
 
 1. Lê a biblioteca (`GetOwnedGames`). Resposta vazia = perfil ou "Detalhes do jogo" privados: para e avisa, sem tocar nos dados.
+   Em seguida lê os jogados recentemente (`GetRecentlyPlayedGames`): jogo ali que não está na biblioteca foi jogado emprestado da Família Steam e entra com `is_owned = 2` (marca "Família"). Essa leitura é opcional: se falhar, nada muda.
 2. Decide jogo a jogo o que reler (`SyncPlanner`): a primeira vez lê tudo; depois, só jogos com tempo de jogo novo, jogados desde a última leitura, que falharam antes, com idioma trocado ou com dados mais velhos que 7 dias (progresso) / 30 dias (lista de conquistas). Jogos sem conquistas são reconferidos a cada 30 dias.
 3. Para cada jogo: esquema + raridade global (quando preciso) e progresso do jogador. Cada jogo é gravado sozinho: se cair a internet no meio, o que já foi salvo fica.
 4. Até 4 jogos em paralelo, no máximo ~6 chamadas/s. Erros de rede/5xx são repetidos (2s, 4s, 8s); 429 pausa todas as chamadas pelo tempo que a Steam pedir.
@@ -143,6 +144,8 @@ tests/
 - **Dado ausente não vira pendente.** Conquista sem estado conhecido é `Unknown`. O percentual é um piso e `IsExact` diz se pode ser exibido como definitivo.
 - **Resposta vazia da biblioteca = perfil privado**, não "biblioteca vazia". Ela nunca marca seus jogos como não possuídos.
 - **Migrações seguras.** Backup antes de alterar um banco existente, cada migração numa transação, recusa abrir banco de versão mais nova.
+- **Jogo da família não rebaixa jogo seu.** Gravar um jogo como da família nunca mexe num jogo que a conta possui, e comprar um jogo da família troca a marca para "seu". Trocar de conta tira os jogos da família da conta anterior.
+- **O token da família não fica.** Só existe durante a importação: não vai para banco, backup, log ou mensagem de erro.
 - **A chave da API não vaza.** Cifrada com DPAPI (usuário atual), nunca incluída em mensagens de erro ou logs, e o cliente HTTP não segue redirecionamentos (a chave vai na URL e não pode ser levada para outro endereço).
 - **Banco danificado tem saída.** Se o arquivo não abre, o app oferece restaurar um backup ou começar do zero, e guarda o arquivo danificado em `backups\` em vez de apagar.
 - **Dados do banco não viram comandos.** Links de guia só abrem se forem http/https; ícones só carregam por https (um caminho de rede num backup adulterado não é acessado).
@@ -155,6 +158,7 @@ Veja também [SEGURANCA.md](SEGURANCA.md).
 - O perfil **e** a opção "Detalhes do jogo" precisam estar **públicos**, senão a Steam devolve a biblioteca vazia e recusa as conquistas.
 - A API oficial **não informa** se uma conquista é perdível, difícil ou rápida. Esses dados são marcados por você no planejador (com a fonte), e o padrão é "desconhecido".
 - `GetGlobalAchievementPercentagesForApp` não exige chave; os demais exigem.
+- **Família Steam:** conquistas de jogo emprestado são de quem joga. O `GetOwnedGames` não lista jogo emprestado; o `GetRecentlyPlayedGames` lista, mas só das últimas 2 semanas. A biblioteca inteira da família (`IFamilyGroupsService/GetSharedLibraryApps`, rota não documentada pela Valve) recusa a chave e exige o `webapi_token` da sessão da loja, que vale cerca de um dia. Por isso ela é usada só na importação única de Configurações, com o token colado, usado e descartado. Entram só jogos da família com tempo de jogo seu (`rt_playtime > 0`).
 
 ## Licença
 

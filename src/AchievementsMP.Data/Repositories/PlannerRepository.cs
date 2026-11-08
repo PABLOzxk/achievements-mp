@@ -103,7 +103,7 @@ public sealed class PlannerRepository(SqliteConnectionFactory factory)
                    n.note AS Note
             FROM achievement_plans ap
             JOIN achievements a ON a.app_id = ap.app_id AND a.api_name = ap.api_name AND a.is_removed = 0
-            JOIN games g ON g.app_id = ap.app_id AND g.is_owned = 1
+            JOIN games g ON g.app_id = ap.app_id AND g.is_owned <> 0
             JOIN player_achievements p ON p.app_id = ap.app_id AND p.api_name = ap.api_name AND p.state = 1
             LEFT JOIN achievement_global_stats gs ON gs.app_id = ap.app_id AND gs.api_name = ap.api_name
             LEFT JOIN achievement_notes n ON n.app_id = ap.app_id AND n.api_name = ap.api_name

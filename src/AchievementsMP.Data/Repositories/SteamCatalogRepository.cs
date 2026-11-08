@@ -50,6 +50,48 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
         await tx.CommitAsync(ct);
     }
 
+    /// <summary>
+    /// Grava jogos jogados emprestados da Família Steam (<see cref="Ownership.Family"/>). Jogo que a conta possui não é
+    /// tocado: os dados dele vêm do GetOwnedGames. Retorna quantos jogos passaram a contar como da família agora.
+    /// </summary>
+    public async Task<int> UpsertFamilyGamesAsync(IReadOnlyCollection<Game> games, DateTimeOffset now, CancellationToken ct = default)
+    {
+        var list = games.DistinctBy(g => g.AppId).ToList();
+        if (list.Count == 0) return 0;
+
+        await using var c = await factory.OpenAsync(ct);
+        await using var tx = await c.BeginTransactionAsync(ct);
+        var ts = Time.ToUnix(now);
+        var ids = list.Select(g => g.AppId).ToArray();
+        var before = (await c.QueryAsync<long>(new CommandDefinition(
+            "SELECT app_id FROM games WHERE app_id IN @ids AND is_owned <> 0", new { ids }, tx, cancellationToken: ct))).ToHashSet();
+
+        foreach (var g in list)
+        {
+            await c.ExecuteAsync(new CommandDefinition("""
+                INSERT INTO games(app_id, name, icon_hash, playtime_minutes, last_played_utc, has_community_stats, is_owned, first_seen_utc, library_synced_utc)
+                VALUES (@AppId, @Name, @IconHash, @PlaytimeMinutes, @LastPlayed, NULL, @family, @ts, @ts)
+                ON CONFLICT(app_id) DO UPDATE SET
+                    name = excluded.name,
+                    icon_hash = COALESCE(excluded.icon_hash, games.icon_hash),
+                    playtime_minutes = MAX(excluded.playtime_minutes, games.playtime_minutes),
+                    last_played_utc = MAX(COALESCE(excluded.last_played_utc, 0), COALESCE(games.last_played_utc, 0)),
+                    is_owned = @family,
+                    library_synced_utc = excluded.library_synced_utc
+                WHERE games.is_owned <> @owned
+                """,
+                new { g.AppId, g.Name, g.IconHash, g.PlaytimeMinutes, LastPlayed = Time.ToUnix(g.LastPlayedUtc), ts, family = (int)Ownership.Family, owned = (int)Ownership.Owned },
+                tx, cancellationToken: ct));
+        }
+
+        // MAX com 0 acima vira 0 quando nenhum dos dois tem data; 0 não é data.
+        await c.ExecuteAsync(new CommandDefinition(
+            "UPDATE games SET last_played_utc = NULL WHERE app_id IN @ids AND last_played_utc = 0", new { ids }, tx, cancellationToken: ct));
+
+        await tx.CommitAsync(ct);
+        return ids.Count(id => !before.Contains(id));
+    }
+
     /// <summary>Grava o esquema de conquistas. Conquistas que sumiram do esquema são marcadas como removidas, não apagadas.</summary>
     public async Task UpsertSchemaAsync(long appId, IReadOnlyCollection<AchievementDefinition> schema, DateTimeOffset now, string? language = null, CancellationToken ct = default)
     {
@@ -223,8 +265,9 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
         return games.SingleOrDefault()?.Progress ?? GameProgress.Empty;
     }
 
+    /// <summary>Biblioteca: jogos da conta e jogos emprestados da Família Steam.</summary>
     public Task<IReadOnlyList<LibraryGame>> GetLibraryAsync(bool includeNotOwned = false, CancellationToken ct = default) =>
-        QueryLibraryAsync(includeNotOwned ? "" : "WHERE g.is_owned = 1", null, ct);
+        QueryLibraryAsync(includeNotOwned ? "" : "WHERE g.is_owned <> 0", null, ct);
 
     private async Task<IReadOnlyList<LibraryGame>> QueryLibraryAsync(string where, object? args, CancellationToken ct)
     {
@@ -254,7 +297,10 @@ public sealed class SteamCatalogRepository(SqliteConnectionFactory factory)
             return new LibraryGame(
                 r.AppId, r.Name, r.IconHash, (int)r.PlaytimeMinutes, Time.FromUnix(r.LastPlayedUtc), r.IsOwned != 0,
                 (DataAvailability)r.Availability, Time.FromUnix(r.PlayerSyncedUtc), r.LastError, progress,
-                CompletionOutlook.From(progress, r.RarestRemaining, (int)r.RemainingWithoutRarity));
+                CompletionOutlook.From(progress, r.RarestRemaining, (int)r.RemainingWithoutRarity))
+            {
+                IsFamily = r.IsOwned == (int)Ownership.Family,
+            };
         }).ToList();
     }
 

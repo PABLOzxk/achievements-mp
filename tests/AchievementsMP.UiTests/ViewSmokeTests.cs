@@ -27,7 +27,7 @@ namespace AchievementsMP.UiTests;
 /// </summary>
 public class ViewSmokeTests
 {
-    private const long Hades = 1145360, Portal = 620;
+    private const long Hades = 1145360, Portal = 620, Celeste = 504230;
     private static readonly DateTimeOffset T0 = DateTimeOffset.UtcNow.AddDays(-3);
 
     [Fact]
@@ -72,13 +72,20 @@ public class ViewSmokeTests
         var library = services.GetRequiredService<LibraryViewModel>();
         await library.OnNavigatedToAsync();
         Render(new LibraryView(), library);
-        Assert.Equal(2, library.Items.Count);
+        Assert.Equal(3, library.Items.Count);
+        // Celeste foi jogado emprestado da Família Steam: aparece na biblioteca com a marca.
+        Assert.Equal([Celeste], library.Items.Where(i => i.IsFamily).Select(i => i.AppId));
 
         var details = services.GetRequiredService<GameDetailsViewModel>();
+        details.Show(Celeste);
+        await details.OnNavigatedToAsync();
+        Render(new GameDetailsView(), details);
+        Assert.True(details.Game!.IsFamily);
         details.Show(Hades);
         await details.OnNavigatedToAsync();
         Render(new GameDetailsView(), details);
         Assert.True(details.HasGame);
+        Assert.False(details.Game!.IsFamily);
         // O filtro padrão mostra só as pendentes; com "Todas" as desbloqueadas aparecem com o fundo verde ou roxo.
         details.Filter = details.FilterOptions.First(o => o.Value == AchievementFilter.All);
         Render(new GameDetailsView(), details);
@@ -171,6 +178,14 @@ public class ViewSmokeTests
         Render(new SettingsView(), settings);
         Assert.Single(BackupService.List(backupFolder));
         Assert.StartsWith("Último backup", settings.LastBackupText);
+
+        // Família Steam: colar algo que não é o token mostra o erro sem chamar a Steam, e o campo é limpo.
+        settings.FamilyToken = "isto não é um token";
+        await settings.ImportFamilyCommand.ExecuteAsync(null);
+        Assert.True(settings.IsFamilyError);
+        Assert.Contains("Não reconheci", settings.FamilyStatus);
+        Assert.Equal("", settings.FamilyToken);
+        Render(new SettingsView(), settings);
 
         // Guia de primeira configuração, com os três estados de passo (sem chamar a Steam de verdade).
         var setup = services.GetRequiredService<SetupViewModel>();
@@ -322,6 +337,12 @@ public class ViewSmokeTests
                 : new PlayerAchievementState(Hades, a, UnlockState.Locked, null)).ToList(), T0);
         await steam.UpsertGlobalPercentagesAsync(Hades,
             new Dictionary<string, double> { ["feita"] = 81.8, ["rara"] = 2.1, ["perdivel"] = 12.5, ["rapida"] = 55.0, ["longa"] = 5.9, ["semclasse"] = 0.4 }, T0);
+
+        await steam.UpsertFamilyGamesAsync([new Game(Celeste, "Celeste", null, 95, T0.AddDays(-2), null)], T0);
+        await steam.UpsertSchemaAsync(Celeste, [new AchievementDefinition(Celeste, "morango", "Um morango", null, false, null, null),
+            new AchievementDefinition(Celeste, "cume", "O cume", null, false, null, null)], T0);
+        await steam.ApplyPlayerStatesAsync(Celeste, [new PlayerAchievementState(Celeste, "morango", UnlockState.Unlocked, T0),
+            new PlayerAchievementState(Celeste, "cume", UnlockState.Locked, null)], T0);
 
         await steam.UpsertSchemaAsync(Portal, [new AchievementDefinition(Portal, "bolo", "O bolo", null, false, null, null)], T0);
         await steam.ApplyPlayerStatesAsync(Portal, [new PlayerAchievementState(Portal, "bolo", UnlockState.Unlocked, T0)], T0);

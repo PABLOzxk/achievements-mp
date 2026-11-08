@@ -20,6 +20,12 @@ public partial class SettingsView : UserControl
             vm.NewApiKey = ApiKeyBox.Password;
     }
 
+    private void OnFamilyTokenChanged(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is SettingsViewModel vm)
+            vm.FamilyToken = FamilyTokenBox.Password;
+    }
+
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         if (e.OldValue is SettingsViewModel old) old.PropertyChanged -= OnViewModelChanged;
@@ -31,5 +37,8 @@ public partial class SettingsView : UserControl
     {
         if (e.PropertyName == nameof(SettingsViewModel.NewApiKey) && sender is SettingsViewModel { NewApiKey: "" } && ApiKeyBox.Password.Length > 0)
             ApiKeyBox.Clear();
+        // O token da família é apagado assim que a importação começa; o campo acompanha.
+        if (e.PropertyName == nameof(SettingsViewModel.FamilyToken) && sender is SettingsViewModel { FamilyToken: "" } && FamilyTokenBox.Password.Length > 0)
+            FamilyTokenBox.Clear();
     }
 }

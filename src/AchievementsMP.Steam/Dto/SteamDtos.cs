@@ -22,6 +22,38 @@ internal sealed class OwnedGameDto
     [JsonPropertyName("has_community_visible_stats")] public bool? HasCommunityVisibleStats { get; set; }
 }
 
+internal sealed class RecentlyPlayedEnvelope { [JsonPropertyName("response")] public RecentlyPlayedResponse? Response { get; set; } }
+
+internal sealed class RecentlyPlayedResponse
+{
+    [JsonPropertyName("total_count")] public int? TotalCount { get; set; }
+    [JsonPropertyName("games")] public List<OwnedGameDto>? Games { get; set; }
+}
+
+// Família Steam (IFamilyGroupsService). Campos de 64 bits vêm como texto no JSON; o parser aceita texto e número.
+
+internal sealed class FamilyGroupForUserEnvelope { [JsonPropertyName("response")] public FamilyGroupForUserResponse? Response { get; set; } }
+
+internal sealed class FamilyGroupForUserResponse
+{
+    [JsonPropertyName("family_groupid")] public ulong? FamilyGroupId { get; set; }
+    [JsonPropertyName("is_not_member_of_any_group")] public bool? IsNotMemberOfAnyGroup { get; set; }
+}
+
+internal sealed class SharedLibraryEnvelope { [JsonPropertyName("response")] public SharedLibraryResponse? Response { get; set; } }
+
+internal sealed class SharedLibraryResponse { [JsonPropertyName("apps")] public List<SharedAppDto>? Apps { get; set; } }
+
+internal sealed class SharedAppDto
+{
+    [JsonPropertyName("appid")] public long AppId { get; set; }
+    [JsonPropertyName("owner_steamids")] public List<ulong>? OwnerSteamIds { get; set; }
+    [JsonPropertyName("name")] public string? Name { get; set; }
+    [JsonPropertyName("img_icon_hash")] public string? ImgIconHash { get; set; }
+    [JsonPropertyName("rt_last_played")] public long? RtLastPlayed { get; set; }
+    [JsonPropertyName("rt_playtime")] public int? RtPlaytime { get; set; }
+}
+
 internal sealed class SchemaEnvelope { [JsonPropertyName("game")] public SchemaGame? Game { get; set; } }
 
 internal sealed class SchemaGame

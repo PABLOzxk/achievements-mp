@@ -146,4 +146,93 @@ public class SteamWebApiClientTests
         server.Stop();
         await serving;
     }
+
+    // ----- Família Steam -----
+
+    private const string AccessToken = "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiI3NjU2MTE5Nzk2MDQzNTUzMCJ9.c2ln";
+
+    [Fact]
+    public async Task Recently_played_uses_the_key_and_lists_borrowed_games()
+    {
+        var (client, handler) = Create(_ => Json(HttpStatusCode.OK, Fixture.Read("recently_played.json")));
+
+        var r = await client.GetRecentlyPlayedGamesAsync(76561197960435530);
+
+        Assert.True(r.IsSuccess);
+        var uri = handler.Requests.Single();
+        Assert.Equal("/IPlayerService/GetRecentlyPlayedGames/v1/", uri.AbsolutePath);
+        Assert.Contains($"key={Key}", uri.Query);
+        var hades = r.Value!.Single(g => g.AppId == 1145360);
+        Assert.Equal(("Hades", "abc123", 95), (hades.Name, hades.IconHash, hades.PlaytimeMinutes));
+    }
+
+    [Fact]
+    public async Task Recently_played_with_nothing_recent_is_an_empty_list()
+    {
+        var (client, _) = Create(_ => Json(HttpStatusCode.OK, """{"response":{"total_count":0}}"""));
+        var r = await client.GetRecentlyPlayedGamesAsync(76561197960435530);
+        Assert.True(r.IsSuccess);
+        Assert.Empty(r.Value!);
+    }
+
+    [Fact]
+    public async Task Family_calls_send_the_token_and_never_the_key()
+    {
+        var (client, handler) = Create(req => Json(HttpStatusCode.OK, Fixture.Read(
+            req.RequestUri!.AbsolutePath.Contains("GetFamilyGroupForUser") ? "family_group.json" : "shared_library.json")));
+
+        var group = await client.GetFamilyGroupIdAsync(AccessToken, 76561197960435530);
+        var apps = await client.GetSharedLibraryAppsAsync(AccessToken, group.Value!.Value, 76561197960435530, "brazilian");
+
+        Assert.Equal(9876543210123UL, group.Value);
+        Assert.True(apps.IsSuccess);
+        Assert.All(handler.Requests, u =>
+        {
+            Assert.Equal("https", u.Scheme);
+            Assert.Equal("api.steampowered.com", u.Host);
+            Assert.Contains($"access_token={AccessToken}", u.Query);
+            Assert.DoesNotContain(Key, u.Query);
+        });
+        var shared = handler.Requests[1];
+        Assert.Equal("/IFamilyGroupsService/GetSharedLibraryApps/v1/", shared.AbsolutePath);
+        Assert.Contains("family_groupid=9876543210123", shared.Query);
+        Assert.Contains("include_own=true", shared.Query);
+
+        var hades = apps.Value!.Single(a => a.AppId == 1145360);
+        Assert.Equal([76561197960287930UL], hades.OwnerSteamIds);
+        Assert.Equal(95, hades.PlaytimeMinutes);
+        Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(1730000000), hades.LastPlayedUtc);
+        Assert.Null(apps.Value!.Single(a => a.AppId == 620).LastPlayedUtc);
+    }
+
+    [Fact]
+    public async Task Not_in_a_family_is_null_not_an_error()
+    {
+        var (client, _) = Create(_ => Json(HttpStatusCode.OK, Fixture.Read("family_none.json")));
+        var r = await client.GetFamilyGroupIdAsync(AccessToken, 76561197960435530);
+        Assert.True(r.IsSuccess);
+        Assert.Null(r.Value);
+    }
+
+    [Theory]
+    [InlineData(401)]
+    [InlineData(403)]
+    public async Task Refused_token_is_its_own_error_and_does_not_leak_the_token(int status)
+    {
+        var (client, _) = Create(_ => Json((HttpStatusCode)status, "<html>Access Denied</html>"));
+
+        var r = await client.GetFamilyGroupIdAsync(AccessToken, 76561197960435530);
+
+        Assert.Equal(SteamErrorKind.InvalidAccessToken, r.Error!.Kind);
+        Assert.DoesNotContain(AccessToken, r.Error.Message);
+    }
+
+    [Fact]
+    public async Task Blank_token_is_refused_without_calling_steam()
+    {
+        var (client, handler) = Create(_ => throw new InvalidOperationException("não deveria chamar"));
+        var r = await client.GetFamilyGroupIdAsync("  ", 76561197960435530);
+        Assert.Equal(SteamErrorKind.InvalidAccessToken, r.Error!.Kind);
+        Assert.Empty(handler.Requests);
+    }
 }

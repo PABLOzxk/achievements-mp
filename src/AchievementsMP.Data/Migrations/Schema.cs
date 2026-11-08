@@ -8,6 +8,7 @@ public static class Schema
     /// - Tabelas pessoais (user_lists, goals, plan_tasks, achievement_notes, achievement_plans, guides) não têm chave estrangeira com cascata
     ///   para as tabelas da Steam, então nada que a sincronização faça pode apagá-las.
     /// - Jogos e conquistas nunca são apagados pela sincronização; são marcados (is_owned = 0, is_removed = 1).
+    /// - games.is_owned: 0 fora da biblioteca, 1 da conta, 2 emprestado da Família Steam (ver Ownership; o 2 entrou sem migração).
     /// </summary>
     public static readonly IReadOnlyList<Migration> All =
     [

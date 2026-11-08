@@ -22,6 +22,12 @@ public sealed record LibraryItem(
     string? ViabilityTooltip,
     bool IsFavorite)
 {
+    /// <summary>Jogo emprestado da Família Steam (a conta não é dona). Aparece com a marca "Família".</summary>
+    public bool IsFamily { get; init; }
+
+    public const string FamilyTooltip =
+        "Jogo da Família Steam: você jogou emprestado e as conquistas são suas. Se comprar o jogo, a marca some.";
+
     /// <summary>Percentual inteiro para exibir. Só mostra 100% quando está completo de verdade (ver <see cref="WholePercent"/>).</summary>
     public string PercentText => WholePercent(Percent, IsComplete);
 
@@ -58,7 +64,10 @@ public sealed record LibraryItem(
 
         return new LibraryItem(
             g.AppId, g.Name, g.IconUrl, FormatPlaytime(g.PlaytimeMinutes), progressText,
-            p.Percent ?? 0, p.Total > 0, p.IsComplete, badge, tooltip, g.Outlook.Viability, vLabel, vTooltip, isFavorite);
+            p.Percent ?? 0, p.Total > 0, p.IsComplete, badge, tooltip, g.Outlook.Viability, vLabel, vTooltip, isFavorite)
+        {
+            IsFamily = g.IsFamily,
+        };
     }
 
     public static (string? Label, string? Tooltip) Describe(CompletionOutlook o)

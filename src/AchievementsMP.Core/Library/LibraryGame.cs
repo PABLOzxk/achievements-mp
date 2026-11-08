@@ -17,5 +17,8 @@ public sealed record LibraryGame(
     GameProgress Progress,
     CompletionOutlook Outlook)
 {
+    /// <summary>Jogado emprestado da Família Steam (não é dono). Continua contando como jogo da biblioteca.</summary>
+    public bool IsFamily { get; init; }
+
     public string? IconUrl => IconHash is null ? null : $"https://media.steampowered.com/steamcommunity/public/images/apps/{AppId}/{IconHash}.jpg";
 }
