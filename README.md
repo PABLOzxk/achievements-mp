@@ -64,7 +64,9 @@ não tempo. Tempo até 100% não vem da Steam, e o HowLongToBeat não tem API p�
 
 A Steam não informa se uma conquista é difícil, rápida ou perdível. O app usa o único dado objetivo disponível: a
 **porcentagem global** de jogadores que desbloquearam cada conquista. A viabilidade de um jogo é a faixa da conquista
-**mais rara que ainda falta**: Viável (≥ 20%), Moderado (5–20%), Difícil (1–5%), Muito difícil (< 1%).
+**mais rara que ainda falta**: Viável (≥ 20%), Moderado (10–20%), Difícil (1–10%), Muito difícil (< 1%).
+As mesmas faixas classificam cada conquista: comum, incomum, **rara (abaixo de 10%, o mesmo corte da Steam)** e
+ultrarrara (abaixo de 1%). Exatamente 10% ainda não conta como rara.
 
 Limite conhecido: a porcentagem é sobre todos os donos do jogo, inclusive quem nunca jogou. Conquistas do fim da
 campanha parecem raras só porque muita gente abandona antes. É um indicador para priorizar, não uma medida de dificuldade.

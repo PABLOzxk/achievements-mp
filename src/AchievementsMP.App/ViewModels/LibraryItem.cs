@@ -66,8 +66,19 @@ public sealed record LibraryItem(
         };
     }
 
-    public static string FormatPercent(double value) =>
-        value < 1 ? value.ToString("0.0#", CultureInfo.CurrentCulture) + "%" : value.ToString("0.#", CultureInfo.CurrentCulture) + "%";
+    /// <summary>
+    /// Corta as casas em vez de arredondar, para o número mostrado nunca subir de faixa: 9,96% aparece como 9,9%
+    /// (é rara) e não como 10% (que não é).
+    /// </summary>
+    public static string FormatPercent(double value)
+    {
+        if (!double.IsFinite(value))
+            return value.ToString(CultureInfo.CurrentCulture) + "%";
+        var d = (decimal)value;
+        return value < 1
+            ? (Math.Floor(d * 100) / 100).ToString("0.0#", CultureInfo.CurrentCulture) + "%"
+            : (Math.Floor(d * 10) / 10).ToString("0.#", CultureInfo.CurrentCulture) + "%";
+    }
 
     private static string FormatPlaytime(int minutes) => minutes switch
     {

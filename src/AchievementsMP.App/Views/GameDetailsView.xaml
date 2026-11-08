@@ -120,7 +120,7 @@
                 <Border Width="10" Height="10" CornerRadius="2" Background="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
                 <TextBlock Text="desbloqueada" Style="{StaticResource Hint}" Margin="6,0,14,0" VerticalAlignment="Center" />
                 <Border Width="10" Height="10" CornerRadius="2" Background="{StaticResource RareBrush}" VerticalAlignment="Center" />
-                <TextBlock Text="rara: menos de 5% dos jogadores têm" Style="{StaticResource Hint}" Margin="6,0,0,0" VerticalAlignment="Center" />
+                <TextBlock Text="rara: menos de 10% dos jogadores têm" Style="{StaticResource Hint}" Margin="6,0,0,0" VerticalAlignment="Center" />
             </StackPanel>
         </WrapPanel>
 
@@ -139,7 +139,7 @@
                     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                     <Setter Property="Template">
                         <Setter.Value>
-                            <!-- Desbloqueada = fundo verde; desbloqueada e rara (< 5%) = roxo. O hover clareia sem apagar a cor. -->
+                            <!-- Desbloqueada = fundo verde; desbloqueada e rara (< 10%) = roxo. O hover clareia sem apagar a cor. -->
                             <ControlTemplate TargetType="ListBoxItem">
                                 <Border Background="{StaticResource CardBrush}" Margin="0,0,0,2" CornerRadius="2" ClipToBounds="True">
                                     <Grid>

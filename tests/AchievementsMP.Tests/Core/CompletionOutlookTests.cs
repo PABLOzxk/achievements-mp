@@ -10,8 +10,9 @@ public class CompletionOutlookTests
     [InlineData(45.0, Viability.High)]
     [InlineData(20.0, Viability.High)]
     [InlineData(19.9, Viability.Medium)]
-    [InlineData(5.0, Viability.Medium)]
-    [InlineData(4.9, Viability.Low)]
+    [InlineData(10.0, Viability.Medium)]
+    [InlineData(9.99, Viability.Low)]
+    [InlineData(5.0, Viability.Low)]
     [InlineData(1.0, Viability.Low)]
     [InlineData(0.4, Viability.VeryLow)]
     public void Viability_follows_the_rarest_remaining_achievement(double rarest, Viability expected)
