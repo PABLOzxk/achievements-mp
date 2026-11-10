@@ -167,9 +167,11 @@
 
         <StackPanel Margin="0,0,16,0">
             <TextBlock Text="Planejador de 100%" Style="{StaticResource PageTitle}" />
+            <!-- Sem GroupName: o grupo é este StackPanel. Com nome, abas de duas telas do planejador fora de janela
+                 (o WPF junta todas no mesmo grupo) ficavam desmarcando uma à outra sem parar. -->
             <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                <RadioButton Style="{StaticResource TabButton}" GroupName="PlannerTabs" Content="Plano do jogo" IsChecked="{Binding IsGameTab, Mode=TwoWay}" />
-                <RadioButton Style="{StaticResource TabButton}" GroupName="PlannerTabs" Content="Metas" IsChecked="{Binding IsGoalsTab, Mode=TwoWay}" />
+                <RadioButton Style="{StaticResource TabButton}" Content="Plano do jogo" IsChecked="{Binding IsGameTab, Mode=TwoWay}" />
+                <RadioButton Style="{StaticResource TabButton}" Content="Metas" IsChecked="{Binding IsGoalsTab, Mode=TwoWay}" />
             </StackPanel>
         </StackPanel>
 
