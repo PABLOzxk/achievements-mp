@@ -278,6 +278,10 @@ public class ViewSmokeTests
         Snapshot((FrameworkElement)window.Content, "planejador", new Size(1600, 900));
         var snapshotEditor = new ProfileEditorViewModel(await profiles.LoadAsync(), profiles, shell);
         var snapshotEditorWindow = new ProfileEditorWindow(snapshotEditor);
+        // Nada gravado ainda, e o tema aplicado aqui é o do CI: fora do padrão, a dica avisa que só muda ao reabrir.
+        Assert.Same(theme, ThemeManager.Current);
+        Assert.Equal(ThemeCatalog.Default.Id, snapshotEditor.SelectedTheme.Id);
+        Assert.Equal(theme == ThemeCatalog.Default, snapshotEditor.ThemeHint.StartsWith("Vale para"));
         // Cabe numa tela de 1366x768 (tirando barra de tarefas e barra de título): Salvar não pode ficar fora da tela.
         var editorContent = (FrameworkElement)snapshotEditorWindow.Content;
         editorContent.Measure(new Size(464, double.PositiveInfinity));

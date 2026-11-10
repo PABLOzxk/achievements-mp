@@ -29,27 +29,6 @@ jobs:
             dotnet test tests/AchievementsMP.UiTests --no-build -c Release --filter "FullyQualifiedName~ViewSmokeTests"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
-      # TEMPORÁRIO (tirar antes do merge): imprime as telas no log, porque a sessão não consegue baixar o artefato.
-      - name: Telas em base64
-        if: always()
-        shell: pwsh
-        run: |
-          Add-Type -AssemblyName System.Drawing
-          $jpeg = [System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object { $_.MimeType -eq 'image/jpeg' }
-          $params = New-Object System.Drawing.Imaging.EncoderParameters 1
-          $params.Param[0] = New-Object System.Drawing.Imaging.EncoderParameter ([System.Drawing.Imaging.Encoder]::Quality, [long]88)
-          $wanted = 'biblioteca*', 'detalhes-100', 'detalhes-100-claro', 'planejador', 'planejador-claro', 'editar-perfil', 'editar-perfil-claro'
-          Get-ChildItem ui-snapshots -Filter *.png | Where-Object { $n = $_.BaseName; $wanted | Where-Object { $n -like $_ } } | ForEach-Object {
-            $src = [System.Drawing.Image]::FromFile($_.FullName)
-            $scale = [Math]::Min(1.0, 1200.0 / $src.Width)
-            $img = New-Object System.Drawing.Bitmap $src, ([int]($src.Width * $scale)), ([int]($src.Height * $scale))
-            $ms = New-Object System.IO.MemoryStream
-            $img.Save($ms, $jpeg, $params)
-            $b = [Convert]::ToBase64String($ms.ToArray())
-            Write-Output "==BEGIN $($_.BaseName)=="
-            for ($i = 0; $i -lt $b.Length; $i += 8000) { Write-Output $b.Substring($i, [Math]::Min(8000, $b.Length - $i)) }
-            Write-Output "==END $($_.BaseName)=="
-          }
       - uses: actions/upload-artifact@v6
         if: always()
         with:
