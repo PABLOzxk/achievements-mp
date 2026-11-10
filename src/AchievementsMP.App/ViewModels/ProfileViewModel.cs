@@ -46,8 +46,12 @@ public sealed partial class ProfileViewModel(ProfileRepository profiles, Profile
     private async Task EditAsync()
     {
         var editor = new ProfileEditorViewModel(await profiles.LoadAsync(), profiles, shell);
-        if (shell.EditProfile(editor))
-            await LoadAsync();
+        if (!shell.EditProfile(editor))
+            return;
+        await LoadAsync();
+        // As cores ficam presas nos estilos já criados: o tema novo só aparece com o app reaberto.
+        if (editor.ThemeChanged && shell.Confirm($"O tema “{editor.SelectedTheme.Name}” aparece quando o app reabrir. Reiniciar agora?", "Tema do app"))
+            shell.Restart();
     }
 }
 
@@ -76,6 +80,20 @@ public sealed partial class ProfileEditorViewModel(UserProfile current, ProfileR
     public bool HasInitial => Initial.Length > 0;
 
     public string ResetPhotoText => current.SteamAvatarUrl is null ? "Remover foto" : "Usar a foto da Steam";
+
+    public IReadOnlyList<ThemeOption> Themes => ThemeOption.All;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ThemeHint))]
+    private ThemeOption _selectedTheme =
+        ThemeOption.All.FirstOrDefault(t => t.Id == current.Theme) ?? ThemeOption.All[0];
+
+    public string ThemeHint => SelectedTheme.Palette == ThemeManager.Current
+        ? "Vale para o app inteiro, em todas as abas."
+        : "O tema novo aparece quando o app reabrir. Ao salvar, dá para reiniciar na hora.";
+
+    /// <summary>Verdadeiro depois de gravar um tema diferente do que estava: quem abriu a janela oferece reiniciar.</summary>
+    public bool ThemeChanged { get; private set; }
     public bool CanUseSteamName => SteamName is not null && Name.Trim() != SteamName;
     public string NameHint => SteamName is null
         ? $"Até {UserProfile.MaxNameLength} caracteres."
@@ -122,6 +140,12 @@ public sealed partial class ProfileEditorViewModel(UserProfile current, ProfileR
     private async Task SaveAsync()
     {
         await profiles.SaveChoicesAsync(UserProfile.NormalizeName(Name, SteamName), CustomAvatar);
+        if (SelectedTheme.Palette != ThemeCatalog.Find(current.Theme))
+        {
+            await profiles.SaveThemeAsync(SelectedTheme.Palette == ThemeCatalog.Default ? null : SelectedTheme.Id);
+            ThemeChanged = true;
+            FileLog.Info($"Tema escolhido: {SelectedTheme.Id}.");
+        }
         FileLog.Info("Perfil editado.");
         Saved = true;
         CloseRequested?.Invoke();

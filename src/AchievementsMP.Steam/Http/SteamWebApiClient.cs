@@ -7,7 +7,7 @@ namespace AchievementsMP.Steam.Http;
 /// Cliente HTTP fino: monta a URL, faz a chamada e classifica falhas. Não faz retry nem cache (isso é da sincronização, Fase 2).
 /// A chave nunca aparece em mensagens de erro ou logs.
 /// </summary>
-public sealed class SteamWebApiClient(HttpClient http, Func<CancellationToken, Task<string?>> apiKeyProvider) : ISteamWebApi
+public sealed class SteamWebApiClient(HttpClient http, Func<CancellationToken, Task<string?>> apiKeyProvider) : ISteamWebApi, ISteamFamilyApi
 {
     public static readonly Uri BaseAddress = new("https://api.steampowered.com/");
 
@@ -52,6 +52,39 @@ public sealed class SteamWebApiClient(HttpClient http, Func<CancellationToken, T
         return r.IsSuccess ? SteamResponseParser.ParseOwnedGames(r.Value!.Body) : SteamResult<OwnedGames>.Fail(r.Error!);
     }
 
+    public async Task<SteamResult<IReadOnlyList<Game>>> GetRecentlyPlayedGamesAsync(ulong steamId, CancellationToken ct = default)
+    {
+        var r = await GetAsync("IPlayerService/GetRecentlyPlayedGames/v1/", new()
+        {
+            ["steamid"] = steamId.ToString(),
+            ["count"] = "0", // 0 = todos os das últimas 2 semanas
+        }, requiresKey: true, ct);
+        return r.IsSuccess ? SteamResponseParser.ParseRecentlyPlayed(r.Value!.Body) : SteamResult<IReadOnlyList<Game>>.Fail(r.Error!);
+    }
+
+    public async Task<SteamResult<ulong?>> GetFamilyGroupIdAsync(string accessToken, ulong steamId, CancellationToken ct = default)
+    {
+        var r = await GetAsync("IFamilyGroupsService/GetFamilyGroupForUser/v1/", new() { ["steamid"] = steamId.ToString() },
+            requiresKey: false, ct, accessToken: accessToken);
+        return r.IsSuccess ? SteamResponseParser.ParseFamilyGroupForUser(r.Value!.Body) : SteamResult<ulong?>.Fail(r.Error!);
+    }
+
+    public async Task<SteamResult<IReadOnlyList<SharedFamilyApp>>> GetSharedLibraryAppsAsync(string accessToken, ulong familyGroupId, ulong steamId,
+        string language, CancellationToken ct = default)
+    {
+        var r = await GetAsync("IFamilyGroupsService/GetSharedLibraryApps/v1/", new()
+        {
+            ["family_groupid"] = familyGroupId.ToString(),
+            ["steamid"] = steamId.ToString(),
+            // Sem include_own a Steam deixa de listar os jogos compartilhados com quem pergunta (relatado por quem usa a rota).
+            ["include_own"] = "true",
+            ["include_excluded"] = "false",
+            ["include_non_games"] = "false",
+            ["language"] = language,
+        }, requiresKey: false, ct, accessToken: accessToken);
+        return r.IsSuccess ? SteamResponseParser.ParseSharedLibraryApps(r.Value!.Body) : SteamResult<IReadOnlyList<SharedFamilyApp>>.Fail(r.Error!);
+    }
+
     public async Task<SteamResult<IReadOnlyList<AchievementDefinition>>> GetSchemaForGameAsync(long appId, string language, CancellationToken ct = default)
     {
         var r = await GetAsync("ISteamUserStats/GetSchemaForGame/v2/", new() { ["appid"] = appId.ToString(), ["l"] = language }, requiresKey: true, ct);
@@ -74,9 +107,20 @@ public sealed class SteamWebApiClient(HttpClient http, Func<CancellationToken, T
 
     private sealed record RawResponse(HttpStatusCode Status, string Body);
 
-    private async Task<SteamResult<RawResponse>> GetAsync(string path, Dictionary<string, string> query, bool requiresKey, CancellationToken ct, bool bodyOnClientError = false)
+    /// <param name="accessToken">
+    /// Token de sessão (Família Steam). Vai só na URL desta chamada, para a Steam por HTTPS e sem redirecionamento,
+    /// como a chave; nunca entra em mensagem de erro nem em log.
+    /// </param>
+    private async Task<SteamResult<RawResponse>> GetAsync(string path, Dictionary<string, string> query, bool requiresKey, CancellationToken ct,
+        bool bodyOnClientError = false, string? accessToken = null)
     {
-        if (requiresKey)
+        if (accessToken is not null)
+        {
+            if (string.IsNullOrWhiteSpace(accessToken))
+                return SteamResult<RawResponse>.Fail(SteamErrorKind.InvalidAccessToken, "Token da Steam vazio.");
+            query["access_token"] = accessToken.Trim();
+        }
+        else if (requiresKey)
         {
             var key = await apiKeyProvider(ct);
             if (string.IsNullOrWhiteSpace(key))
@@ -95,6 +139,8 @@ public sealed class SteamWebApiClient(HttpClient http, Func<CancellationToken, T
             if (response.IsSuccessStatusCode || (bodyOnClientError && (int)status is 400 or 403 && body.Contains("playerstats", StringComparison.Ordinal)))
                 return SteamResult<RawResponse>.Ok(new RawResponse(status, body));
 
+            if (accessToken is not null && (int)status is 401 or 403)
+                return SteamResult<RawResponse>.Fail(SteamErrorKind.InvalidAccessToken, $"A Steam recusou o token ({(int)status}).");
             return SteamResult<RawResponse>.Fail(Classify(status, response.Headers.RetryAfter?.Delta));
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

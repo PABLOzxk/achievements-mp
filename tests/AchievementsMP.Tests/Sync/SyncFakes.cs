@@ -15,8 +15,16 @@ internal sealed class FakeClock(DateTimeOffset start) : TimeProvider
 }
 
 /// <summary>Steam em memória. Falhas são enfileiradas por chamada ("owned", "schema:620", "player:620", "global:620", "vanity").</summary>
-internal sealed class FakeSteam : ISteamWebApi
+internal sealed class FakeSteam : ISteamWebApi, ISteamFamilyApi
 {
+    /// <summary>"Jogados recentemente" (inclui emprestados da família). Por padrão, vazio.</summary>
+    public List<Game> Recent { get; set; } = [];
+    /// <summary>Id da família do usuário; null = não está em nenhuma.</summary>
+    public ulong? FamilyGroupId { get; set; }
+    public List<SharedFamilyApp> SharedApps { get; set; } = [];
+    /// <summary>Tokens recebidos pelas chamadas da família, para conferir que o token certo foi usado.</summary>
+    public List<string> TokensSeen { get; } = [];
+
     public Dictionary<string, ulong> Vanity { get; } = new();
     public List<Game> Library { get; set; } = [];
     public Dictionary<long, List<AchievementDefinition>> Schemas { get; } = new();
@@ -65,6 +73,22 @@ internal sealed class FakeSteam : ISteamWebApi
 
     public Task<SteamResult<OwnedGames>> GetOwnedGamesAsync(ulong steamId, CancellationToken ct = default) =>
         Task.FromResult(Respond("owned", () => SteamResult<OwnedGames>.Ok(new OwnedGames(Library.Count, Library.ToList()))));
+
+    public Task<SteamResult<IReadOnlyList<Game>>> GetRecentlyPlayedGamesAsync(ulong steamId, CancellationToken ct = default) =>
+        Task.FromResult(Respond("recent", () => SteamResult<IReadOnlyList<Game>>.Ok(Recent.ToList())));
+
+    public Task<SteamResult<ulong?>> GetFamilyGroupIdAsync(string accessToken, ulong steamId, CancellationToken ct = default)
+    {
+        TokensSeen.Add(accessToken);
+        return Task.FromResult(Respond("family", () => SteamResult<ulong?>.Ok(FamilyGroupId)));
+    }
+
+    public Task<SteamResult<IReadOnlyList<SharedFamilyApp>>> GetSharedLibraryAppsAsync(string accessToken, ulong familyGroupId, ulong steamId,
+        string language, CancellationToken ct = default)
+    {
+        TokensSeen.Add(accessToken);
+        return Task.FromResult(Respond($"shared:{familyGroupId}", () => SteamResult<IReadOnlyList<SharedFamilyApp>>.Ok(SharedApps.ToList())));
+    }
 
     public Task<SteamResult<IReadOnlyList<AchievementDefinition>>> GetSchemaForGameAsync(long appId, string language, CancellationToken ct = default) =>
         Task.FromResult(Respond($"schema:{appId}", () => SteamResult<IReadOnlyList<AchievementDefinition>>.Ok(Schemas.GetValueOrDefault(appId) ?? [])));

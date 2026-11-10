@@ -10,9 +10,9 @@ public enum Viability
     Unknown = 0,
     /// <summary>A mais rara que falta foi obtida por menos de 1% dos jogadores.</summary>
     VeryLow = 1,
-    /// <summary>Entre 1% e 5%.</summary>
+    /// <summary>Entre 1% e 10%: falta alguma conquista rara.</summary>
     Low = 2,
-    /// <summary>Entre 5% e 20%.</summary>
+    /// <summary>Entre 10% e 20%.</summary>
     Medium = 3,
     /// <summary>20% ou mais: todas as que faltam são comuns.</summary>
     High = 4,
@@ -22,7 +22,11 @@ public enum Viability
 
 public sealed record CompletionOutlook(int Remaining, double? RarestRemainingPercent, Viability Viability)
 {
-    public const double HighThreshold = 20, MediumThreshold = 5, LowThreshold = 1;
+    /// <summary>
+    /// Faixas de raridade, usadas também na viabilidade: comum (≥ 20%), incomum (10% a 20%), rara (abaixo de 10%,
+    /// o mesmo corte da Steam) e ultrarrara (abaixo de 1%). Exatamente 10% ainda não é rara.
+    /// </summary>
+    public const double HighThreshold = 20, MediumThreshold = 10, LowThreshold = 1;
 
     public static readonly CompletionOutlook None = new(0, null, Viability.Unknown);
 

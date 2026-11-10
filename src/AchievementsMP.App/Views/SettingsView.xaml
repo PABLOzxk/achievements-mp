@@ -32,6 +32,45 @@
                 </StackPanel>
             </Border>
     
+            <!-- Família Steam: jogos emprestados entram sozinhos; os antigos, com uma importação única por token. -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="FAMÍLIA STEAM" Style="{StaticResource SectionTitle}" />
+                    <TextBlock Style="{StaticResource Body}" TextWrapping="Wrap"
+                               Text="Jogos que você joga emprestados da Família Steam entram sozinhos na biblioteca, com a marca “Família”. As conquistas são suas. Só que a Steam só mostra os que você jogou nas últimas 2 semanas." />
+                    <TextBlock Style="{StaticResource Body}" TextWrapping="Wrap" Margin="0,10,0,0"
+                               Text="Para trazer os que você jogou antes, faça uma importação única:" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="1. Com a Steam aberta no navegador, " Style="{StaticResource Body}" VerticalAlignment="Center" />
+                        <Button Style="{StaticResource LinkButton}" Content="abra a página do token" Command="{Binding OpenFamilyTokenPageCommand}" VerticalAlignment="Center" />
+                        <TextBlock Text="." Style="{StaticResource Body}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Text="2. Copie tudo o que aparecer (Ctrl+A, Ctrl+C) e cole aqui:" Style="{StaticResource Body}" Margin="0,4,0,6" />
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" Content="Importar jogos da família" Margin="8,0,0,0"
+                                Command="{Binding ImportFamilyCommand}" />
+                        <PasswordBox x:Name="FamilyTokenBox" PasswordChanged="OnFamilyTokenChanged" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding FamilyStatus}" Margin="0,10,0,0" TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource Body}">
+                                <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFamilyError}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding FamilyStatus}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Text="Cuidado: esse token dá acesso à sua conta Steam por cerca de um dia. Trate como senha. O app usa uma vez, só com a Steam, e descarta sem salvar. Nunca cole em outro lugar nem mande para ninguém. Entram só os jogos da família que você já jogou." />
+                </StackPanel>
+            </Border>
+
             <!-- Sincronização -->
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <StackPanel>

@@ -27,7 +27,7 @@ namespace AchievementsMP.UiTests;
 /// </summary>
 public class ViewSmokeTests
 {
-    private const long Hades = 1145360, Portal = 620;
+    private const long Hades = 1145360, Portal = 620, Celeste = 504230;
     private static readonly DateTimeOffset T0 = DateTimeOffset.UtcNow.AddDays(-3);
 
     [Fact]
@@ -44,6 +44,16 @@ public class ViewSmokeTests
 
         var app = new AchievementsMP.App.App();
         app.InitializeComponent();
+
+        // Tema: o CI roda este teste uma vez por tema (AMP_UI_THEME). Aplicado no mesmo ponto em que o app aplica,
+        // antes de qualquer janela; as imagens das telas ganham o nome do tema.
+        var colors = app.Resources.MergedDictionaries.Single(d => d.Source.OriginalString.EndsWith("Colors.xaml"));
+        foreach (var key in ThemeManager.Resources(ThemeCatalog.Find("claro")).Keys)
+            Assert.True(colors.Contains(key), $"Theme/Colors.xaml não tem a chave {key}, que os temas trocam");
+        var theme = ThemeCatalog.Find(Environment.GetEnvironmentVariable("AMP_UI_THEME"));
+        ThemeManager.Apply(app.Resources, theme);
+        Assert.Equal(theme.Card, ((SolidColorBrush)app.FindResource("CardBrush")).Color);
+        _snapshotSuffix = theme == ThemeCatalog.Default ? "" : "-" + theme.Id;
 
         var paths = new AppPaths(Path.Combine(Path.GetTempPath(), "amp-ui-tests", Guid.NewGuid().ToString("N")));
         var (factory, migration, _) = await AppDatabase.InitializeAsync(paths);
@@ -62,13 +72,20 @@ public class ViewSmokeTests
         var library = services.GetRequiredService<LibraryViewModel>();
         await library.OnNavigatedToAsync();
         Render(new LibraryView(), library);
-        Assert.Equal(2, library.Items.Count);
+        Assert.Equal(3, library.Items.Count);
+        // Celeste foi jogado emprestado da Família Steam: aparece na biblioteca com a marca.
+        Assert.Equal([Celeste], library.Items.Where(i => i.IsFamily).Select(i => i.AppId));
 
         var details = services.GetRequiredService<GameDetailsViewModel>();
+        details.Show(Celeste);
+        await details.OnNavigatedToAsync();
+        Render(new GameDetailsView(), details);
+        Assert.True(details.Game!.IsFamily);
         details.Show(Hades);
         await details.OnNavigatedToAsync();
         Render(new GameDetailsView(), details);
         Assert.True(details.HasGame);
+        Assert.False(details.Game!.IsFamily);
         // O filtro padrão mostra só as pendentes; com "Todas" as desbloqueadas aparecem com o fundo verde ou roxo.
         details.Filter = details.FilterOptions.First(o => o.Value == AchievementFilter.All);
         Render(new GameDetailsView(), details);
@@ -100,6 +117,19 @@ public class ViewSmokeTests
         await planner.AddTaskCommand.ExecuteAsync(null);
         planner.Tasks[0].IsDone = true;
         Render(plannerView, planner);
+
+        // Item de checklist comprido: corta em duas linhas e só ele ganha a dica com o texto inteiro.
+        static TextBlock ChecklistText(string text) => new()
+        {
+            Text = text, Width = 240, FontSize = 13, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis,
+            LineHeight = 18, LineStackingStrategy = LineStackingStrategy.BlockLineHeight, MaxHeight = 36,
+        };
+        var longTask = ChecklistText(string.Join(" ", Enumerable.Repeat("pegar a chave no capítulo dois", 12)));
+        var shortTask = ChecklistText("Zerar uma vez");
+        Render(longTask, new object());
+        Render(shortTask, new object());
+        Assert.True(TrimmedTextToolTip.IsTrimmed(longTask));
+        Assert.False(TrimmedTextToolTip.IsTrimmed(shortTask));
 
         // Checklist da conquista: só aparece nela, e a linha do plano mostra a contagem.
         var gameTaskCount = planner.Tasks.Count;
@@ -148,6 +178,14 @@ public class ViewSmokeTests
         Render(new SettingsView(), settings);
         Assert.Single(BackupService.List(backupFolder));
         Assert.StartsWith("Último backup", settings.LastBackupText);
+
+        // Família Steam: colar algo que não é o token mostra o erro sem chamar a Steam, e o campo é limpo.
+        settings.FamilyToken = "isto não é um token";
+        await settings.ImportFamilyCommand.ExecuteAsync(null);
+        Assert.True(settings.IsFamilyError);
+        Assert.Contains("Não reconheci", settings.FamilyStatus);
+        Assert.Equal("", settings.FamilyToken);
+        Render(new SettingsView(), settings);
 
         // Guia de primeira configuração, com os três estados de passo (sem chamar a Steam de verdade).
         var setup = services.GetRequiredService<SetupViewModel>();
@@ -222,9 +260,47 @@ public class ViewSmokeTests
         Render((FrameworkElement)window.Content, main);
         Snapshot((FrameworkElement)window.Content, "janela", new Size(1600, 900));
         Snapshot((FrameworkElement)window.Content, "janela-minima", new Size(944, 540));
+
+        // Jogo 100% (troféu e barra dourada) e checklist com texto longo, para conferir no artefato "telas" do CI.
+        planner.IsGoalsTab = false;
+        main.CurrentPage = library;
+        Render((FrameworkElement)window.Content, main);
+        Snapshot((FrameworkElement)window.Content, "biblioteca", new Size(1600, 900));
+        details.Show(Portal);
+        await details.OnNavigatedToAsync();
+        Assert.True(details.Game!.IsComplete);
+        Assert.Equal("100%", details.Game.PercentText);
+        main.CurrentPage = details;
+        Render((FrameworkElement)window.Content, main);
+        Snapshot((FrameworkElement)window.Content, "detalhes-100", new Size(1600, 900));
+        main.CurrentPage = planner;
+        Render((FrameworkElement)window.Content, main);
+        Snapshot((FrameworkElement)window.Content, "planejador", new Size(1600, 900));
         var snapshotEditor = new ProfileEditorViewModel(await profiles.LoadAsync(), profiles, shell);
         var snapshotEditorWindow = new ProfileEditorWindow(snapshotEditor);
-        Snapshot((FrameworkElement)snapshotEditorWindow.Content, "editar-perfil", new Size(464, 420));
+        // Cabe numa tela de 1366x768 (tirando barra de tarefas e barra de título): Salvar não pode ficar fora da tela.
+        var editorContent = (FrameworkElement)snapshotEditorWindow.Content;
+        editorContent.Measure(new Size(464, double.PositiveInfinity));
+        Assert.True(editorContent.DesiredSize.Height <= 680, $"“Seu perfil” ficou com {editorContent.DesiredSize.Height:0} px de altura");
+        Snapshot(editorContent, "editar-perfil", new Size(464, 700));
+
+        // Tema em "Seu perfil": escolher outro grava e pede reiniciar; salvar sem mudar não pede.
+        var themeEditor = new ProfileEditorViewModel(await profiles.LoadAsync(), profiles, shell);
+        Assert.Equal(ThemeCatalog.Default.Id, themeEditor.SelectedTheme.Id);
+        Assert.Equal(ThemeCatalog.All.Count, themeEditor.Themes.Count);
+        themeEditor.SelectedTheme = themeEditor.Themes.Single(t => t.Id == "roxo");
+        Render((FrameworkElement)new ProfileEditorWindow(themeEditor).Content, themeEditor);
+        await themeEditor.SaveCommand.ExecuteAsync(null);
+        Assert.True(themeEditor.ThemeChanged);
+        Assert.Equal("roxo", await profiles.LoadThemeAsync());
+        var sameTheme = new ProfileEditorViewModel(await profiles.LoadAsync(), profiles, shell);
+        Assert.Equal("roxo", sameTheme.SelectedTheme.Id);
+        await sameTheme.SaveCommand.ExecuteAsync(null);
+        Assert.False(sameTheme.ThemeChanged);
+        var backToDefault = new ProfileEditorViewModel(await profiles.LoadAsync(), profiles, shell) { SelectedTheme = ThemeOption.All[0] };
+        await backToDefault.SaveCommand.ExecuteAsync(null);
+        Assert.True(backToDefault.ThemeChanged);
+        Assert.Null(await profiles.LoadThemeAsync());
 
         // Janela de recuperação de banco danificado (aparece antes da principal, com os mesmos estilos).
         var recovery = new DatabaseRecoveryWindow("file is not a database", paths.Backups);
@@ -266,6 +342,12 @@ public class ViewSmokeTests
         await steam.UpsertGlobalPercentagesAsync(Hades,
             new Dictionary<string, double> { ["feita"] = 81.8, ["rara"] = 2.1, ["perdivel"] = 12.5, ["rapida"] = 55.0, ["longa"] = 5.9, ["semclasse"] = 0.4 }, T0);
 
+        await steam.UpsertFamilyGamesAsync([new Game(Celeste, "Celeste", null, 95, T0.AddDays(-2), null)], T0);
+        await steam.UpsertSchemaAsync(Celeste, [new AchievementDefinition(Celeste, "morango", "Um morango", null, false, null, null),
+            new AchievementDefinition(Celeste, "cume", "O cume", null, false, null, null)], T0);
+        await steam.ApplyPlayerStatesAsync(Celeste, [new PlayerAchievementState(Celeste, "morango", UnlockState.Unlocked, T0),
+            new PlayerAchievementState(Celeste, "cume", UnlockState.Locked, null)], T0);
+
         await steam.UpsertSchemaAsync(Portal, [new AchievementDefinition(Portal, "bolo", "O bolo", null, false, null, null)], T0);
         await steam.ApplyPlayerStatesAsync(Portal, [new PlayerAchievementState(Portal, "bolo", UnlockState.Unlocked, T0)], T0);
 
@@ -275,7 +357,9 @@ public class ViewSmokeTests
         await planner.SavePlanAsync(new AchievementPlan(Hades, "alta", Priority: Priority.High), T0);
         await planner.AddGuideAsync(Hades, null, new Uri("https://example.com/hades-100"), "Guia 100%", T0);
         await planner.AddGuideAsync(Hades, "perdivel", new Uri("https://example.com/perdivel"), null, T0);
-        await planner.AddTaskAsync(Hades, null, "Comprar todos os itens do contrato", T0);
+        // Longo de propósito: no checklist ele quebra em duas linhas, termina em "…" e aparece inteiro na dica.
+        await planner.AddTaskAsync(Hades, null,
+            "Comprar todos os itens do contrato da casa, incluindo o espelho completo, as armas aspectadas e as melhorias do bar, antes de tentar o calor 32 com cada arma", T0);
         var done = await planner.AddTaskAsync(Hades, null, "Zerar uma vez", T0);
         await planner.SetTaskDoneAsync(done, T0.AddDays(1));
 
@@ -289,6 +373,8 @@ public class ViewSmokeTests
         var fav = await personal.GetOrCreateFavoritesAsync(T0);
         await personal.AddGameToListAsync(fav, Hades, T0);
     }
+
+    private static string _snapshotSuffix = "";
 
     private static void Render(FrameworkElement view, object viewModel)
     {
@@ -317,11 +403,16 @@ public class ViewSmokeTests
             Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle);
         }
         var bitmap = new RenderTargetBitmap((int)size.Width, (int)size.Height, 96, 96, PixelFormats.Pbgra32);
+        // Fundo da janela por baixo, como no app: o conteúdo de uma janela não tem fundo próprio.
+        var background = new DrawingVisual();
+        using (var dc = background.RenderOpen())
+            dc.DrawRectangle((Brush)Application.Current.FindResource("WindowBrush"), null, new Rect(size));
+        bitmap.Render(background);
         bitmap.Render(view);
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         Directory.CreateDirectory(folder);
-        using var file = File.Create(Path.Combine(folder, name + ".png"));
+        using var file = File.Create(Path.Combine(folder, name + _snapshotSuffix + ".png"));
         encoder.Save(file);
     }
 

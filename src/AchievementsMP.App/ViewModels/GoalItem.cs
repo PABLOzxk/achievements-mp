@@ -26,6 +26,7 @@ public sealed record GoalItem(
     public bool CanAbandon => IsActive;
     public bool CanReopen => !IsActive;
     public bool HasGame => AppId is not null;
+    public string PercentText => LibraryItem.WholePercent(Percent, IsMet);
 
     public static GoalItem From(GoalView v, DateTimeOffset now, TimeZoneInfo zone)
     {

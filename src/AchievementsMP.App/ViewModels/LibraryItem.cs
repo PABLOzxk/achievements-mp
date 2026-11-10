@@ -22,6 +22,21 @@ public sealed record LibraryItem(
     string? ViabilityTooltip,
     bool IsFavorite)
 {
+    /// <summary>Jogo emprestado da Família Steam (a conta não é dona). Aparece com a marca "Família".</summary>
+    public bool IsFamily { get; init; }
+
+    public const string FamilyTooltip =
+        "Jogo da Família Steam: você jogou emprestado e as conquistas são suas. Se comprar o jogo, a marca some.";
+
+    /// <summary>Percentual inteiro para exibir. Só mostra 100% quando está completo de verdade (ver <see cref="WholePercent"/>).</summary>
+    public string PercentText => WholePercent(Percent, IsComplete);
+
+    /// <summary>
+    /// Corta em vez de arredondar: 249 de 250 (99,6%) aparece como 99%, não como um 100% que ainda não é.
+    /// </summary>
+    public static string WholePercent(double percent, bool complete) =>
+        complete ? "100%" : Math.Clamp(Math.Floor(percent), 0, 99).ToString("0", CultureInfo.InvariantCulture) + "%";
+
     public static LibraryItem From(LibraryGame g, bool isFavorite = false)
     {
         var p = g.Progress;
@@ -49,7 +64,10 @@ public sealed record LibraryItem(
 
         return new LibraryItem(
             g.AppId, g.Name, g.IconUrl, FormatPlaytime(g.PlaytimeMinutes), progressText,
-            p.Percent ?? 0, p.Total > 0, p.IsComplete, badge, tooltip, g.Outlook.Viability, vLabel, vTooltip, isFavorite);
+            p.Percent ?? 0, p.Total > 0, p.IsComplete, badge, tooltip, g.Outlook.Viability, vLabel, vTooltip, isFavorite)
+        {
+            IsFamily = g.IsFamily,
+        };
     }
 
     public static (string? Label, string? Tooltip) Describe(CompletionOutlook o)
@@ -66,8 +84,19 @@ public sealed record LibraryItem(
         };
     }
 
-    public static string FormatPercent(double value) =>
-        value < 1 ? value.ToString("0.0#", CultureInfo.CurrentCulture) + "%" : value.ToString("0.#", CultureInfo.CurrentCulture) + "%";
+    /// <summary>
+    /// Corta as casas em vez de arredondar, para o número mostrado nunca subir de faixa: 9,96% aparece como 9,9%
+    /// (é rara) e não como 10% (que não é).
+    /// </summary>
+    public static string FormatPercent(double value)
+    {
+        if (!double.IsFinite(value))
+            return value.ToString(CultureInfo.CurrentCulture) + "%";
+        var d = (decimal)value;
+        return value < 1
+            ? (Math.Floor(d * 100) / 100).ToString("0.0#", CultureInfo.CurrentCulture) + "%"
+            : (Math.Floor(d * 10) / 10).ToString("0.#", CultureInfo.CurrentCulture) + "%";
+    }
 
     private static string FormatPlaytime(int minutes) => minutes switch
     {

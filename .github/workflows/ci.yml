@@ -18,6 +18,17 @@ jobs:
         env:
           # Os testes de interface gravam imagens das telas aqui (ver ViewSmokeTests.Snapshot).
           AMP_UI_SNAPSHOTS: ${{ github.workspace }}/ui-snapshots
+      # Cada tema abre todas as telas de novo: pega chave de cor faltando, erro de XAML/binding e grava as telas no tema.
+      - name: Telas em cada tema
+        shell: pwsh
+        env:
+          AMP_UI_SNAPSHOTS: ${{ github.workspace }}/ui-snapshots
+        run: |
+          foreach ($theme in 'preto', 'grafite', 'roxo', 'meia-noite', 'carmesim', 'claro') {
+            $env:AMP_UI_THEME = $theme
+            dotnet test tests/AchievementsMP.UiTests --no-build -c Release --filter "FullyQualifiedName~ViewSmokeTests"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
       - uses: actions/upload-artifact@v6
         if: always()
         with:

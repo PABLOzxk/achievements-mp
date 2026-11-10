@@ -78,6 +78,24 @@ public class ProfileTests
     }
 
     [Fact]
+    public async Task Theme_is_saved_on_its_own_and_survives_profile_edits()
+    {
+        await using var db = await TempDatabase.CreateMigratedAsync();
+        var repo = new ProfileRepository(db.Factory);
+        Assert.Null(await repo.LoadThemeAsync());
+
+        await repo.SaveThemeAsync("roxo");
+        await repo.SaveChoicesAsync("Pablo", Photo); // salvar nome e foto não mexe no tema
+        await repo.SaveSteamAsync("PabloNaSteam", SteamAvatar);
+        Assert.Equal("roxo", await repo.LoadThemeAsync());
+        Assert.Equal("roxo", (await repo.LoadAsync()).Theme);
+
+        await repo.SaveThemeAsync(null); // voltar ao padrão
+        Assert.Null(await repo.LoadThemeAsync());
+        Assert.Null((await repo.LoadAsync()).Theme);
+    }
+
+    [Fact]
     public async Task Chosen_photo_and_name_go_into_the_backup()
     {
         await using var db = await TempDatabase.CreateMigratedAsync();

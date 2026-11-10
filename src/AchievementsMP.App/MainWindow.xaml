@@ -119,7 +119,7 @@
                     </Grid>
                 </StackPanel>
 
-                <Image Grid.Row="5" Source="Assets/logo.png" Width="200" Margin="16,4,16,18" HorizontalAlignment="Left"
+                <Image Grid.Row="5" Source="{StaticResource LogoImage}" Width="200" Margin="16,4,16,18" HorizontalAlignment="Left"
                        RenderOptions.BitmapScalingMode="HighQuality" AutomationProperties.Name="Achievements MP: rumo ao 100%" />
             </Grid>
         </ScrollViewer>

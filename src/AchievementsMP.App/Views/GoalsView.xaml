@@ -38,7 +38,7 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <ProgressBar Maximum="100" Value="{Binding Percent, Mode=OneWay}" VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="1" Text="{Binding Percent, StringFormat={}{0:0}%}" FontSize="12" Margin="10,0,0,0"
+                        <TextBlock Grid.Column="1" Text="{Binding PercentText}" FontSize="12" Margin="10,0,0,0"
                                    Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
                     </Grid>
 

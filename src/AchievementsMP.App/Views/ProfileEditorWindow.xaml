@@ -9,6 +9,50 @@
         TextOptions.TextFormattingMode="Display">
     <Window.Resources>
         <conv:NotNullToVisibilityConverter x:Key="NotNullToVisibility" />
+
+        <!-- Miniatura do tema, desenhada com as cores dele: fundo, barra lateral, cartão com texto e barra de progresso.
+             82 de largura para caberem 4 por linha: com 3, a janela passava da altura de uma tela de 768. -->
+        <DataTemplate x:Key="ThemeSwatch">
+            <StackPanel Width="82">
+                <Border Height="48" CornerRadius="4" Background="{Binding Background}" ClipToBounds="True">
+                    <Grid>
+                        <Border Width="16" HorizontalAlignment="Left" Background="{Binding Sidebar}" CornerRadius="4,0,0,4" />
+                        <Border Margin="22,7,7,7" CornerRadius="3" Background="{Binding Card}" Padding="6,5">
+                            <StackPanel>
+                                <Border Height="4" Width="30" HorizontalAlignment="Left" CornerRadius="2" Background="{Binding Text}" />
+                                <Border Height="3" Width="20" HorizontalAlignment="Left" CornerRadius="1.5" Margin="0,4,0,0" Background="{Binding Muted}" />
+                                <Border Height="3" Margin="0,5,0,0" CornerRadius="1.5" Background="{Binding Progress}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+                <TextBlock Text="{Binding Name}" FontSize="12" Margin="2,5,0,1" Foreground="{StaticResource TextSecondaryBrush}"
+                           TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </DataTemplate>
+        <Style x:Key="ThemeSwatchItem" TargetType="ListBoxItem">
+            <Setter Property="Margin" Value="0,0,8,8" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusTight}" />
+            <Setter Property="ToolTip" Value="{Binding Name}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" BorderThickness="2" BorderBrush="Transparent" CornerRadius="6" Padding="2" Background="Transparent">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <StackPanel Margin="28,24,28,24">
@@ -39,6 +83,18 @@
                     Visibility="{Binding CanUseSteamName, Converter={StaticResource BoolToVisibility}}" />
             <TextBlock Style="{StaticResource Hint}" Margin="0" Text="{Binding NameHint}" />
         </DockPanel>
+
+        <TextBlock Text="Tema do app" Style="{StaticResource FieldLabel}" Margin="0,22,0,8" />
+        <ListBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" ItemTemplate="{StaticResource ThemeSwatch}"
+                 ItemContainerStyle="{StaticResource ThemeSwatchItem}" Style="{StaticResource PlainList}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Tema do app">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+        </ListBox>
+        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,0" Text="{Binding ThemeHint}" />
 
         <TextBlock Text="{Binding Error}" Foreground="{StaticResource WarningBrush}" FontSize="13" TextWrapping="Wrap" Margin="0,14,0,0"
                    Visibility="{Binding Error, Converter={StaticResource NotNullToVisibility}}" />

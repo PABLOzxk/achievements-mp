@@ -98,6 +98,7 @@
     <Style TargetType="Button" BasedOn="{StaticResource BaseButton}" />
     <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
         <Setter Property="Background" Value="{StaticResource PrimaryButtonBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource PrimaryButtonForegroundBrush}" />
     </Style>
     <Style x:Key="LinkButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
         <Setter Property="Background" Value="Transparent" />
@@ -115,7 +116,7 @@
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-                <Setter Property="Background" Value="#14FFFFFF" />
+                <Setter Property="Background" Value="{StaticResource HoverOverlayBrush}" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -130,7 +131,7 @@
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-                <Setter Property="Background" Value="#14FFFFFF" />
+                <Setter Property="Background" Value="{StaticResource HoverOverlayBrush}" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -252,14 +253,19 @@
         <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusTight}" />
         <Setter Property="Template">
             <Setter.Value>
+                <!-- Grade em vez de StackPanel: o texto recebe a largura que sobra e quebra linha em vez de sair cortado. -->
                 <ControlTemplate TargetType="CheckBox">
-                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                    <Grid Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
                         <Border x:Name="Box" Width="18" Height="18" CornerRadius="3" Background="{StaticResource InputBrush}"
-                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" VerticalAlignment="Center">
+                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" VerticalAlignment="Top">
                             <Path x:Name="Mark" Data="M3,9 L7,13 L15,4" Stroke="{StaticResource WindowBrush}" StrokeThickness="2" Visibility="Collapsed" />
                         </Border>
-                        <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center" />
-                    </StackPanel>
+                        <ContentPresenter Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" />
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Box" Property="Background" Value="{StaticResource AccentBrush}" />
@@ -369,10 +375,10 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverOverlayBrush}" />
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#1F66C0F4" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource SelectedNavBrush}" />
                             <Setter TargetName="Indicator" Property="Visibility" Value="Visible" />
                             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
                         </Trigger>
@@ -396,10 +402,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverOverlayBrush}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#1FFFFFFF" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource PressedOverlayBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -447,15 +453,55 @@
         </Setter>
     </Style>
 
+    <!-- Barra de progresso de um jogo (DataContext = LibraryItem): dourada quando o jogo está 100%. -->
+    <Style x:Key="GameProgress" TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsComplete}" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource GoldProgressBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="GamePercentText" TargetType="TextBlock">
+        <Setter Property="Text" Value="{Binding PercentText}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsComplete}" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource GoldBrush}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Dica com texto longo: caixa no tema do app, quebrando linha. -->
+    <Style x:Key="TextToolTip" TargetType="ToolTip">
+        <Setter Property="Background" Value="{StaticResource CardBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="12,9" />
+        <Setter Property="MaxWidth" Value="460" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" CornerRadius="4">
+                        <ContentPresenter />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Barras de rolagem discretas -->
     <Style x:Key="ScrollThumb" TargetType="Thumb">
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
-                    <Border x:Name="Bd" Background="#33FFFFFF" CornerRadius="3" Margin="2" />
+                    <Border x:Name="Bd" Background="{StaticResource ScrollThumbBrush}" CornerRadius="3" Margin="2" />
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#66FFFFFF" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ScrollThumbHoverBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -543,7 +589,7 @@
         <Setter Property="Margin" Value="0,0,6,0" />
     </Style>
     <Style x:Key="NeutralChip" TargetType="Border" BasedOn="{StaticResource Chip}">
-        <Setter Property="Background" Value="#22FFFFFF" />
+        <Setter Property="Background" Value="{StaticResource NeutralChipBrush}" />
         <Setter Property="Margin" Value="0,0,6,0" />
     </Style>
     <Style x:Key="ChipText" TargetType="TextBlock">

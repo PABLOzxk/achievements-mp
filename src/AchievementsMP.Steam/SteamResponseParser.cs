@@ -33,6 +33,57 @@ internal static class SteamResponseParser
         return SteamResult<OwnedGames>.Ok(new OwnedGames(r.GameCount ?? games.Count, games));
     });
 
+    /// <summary>
+    /// Jogados nas últimas 2 semanas. Sem jogo recente a Steam devolve <c>{"response":{"total_count":0}}</c>; perfil privado
+    /// devolve <c>{"response":{}}</c>. Para quem só quer descobrir jogos novos, os dois casos são "nada a acrescentar".
+    /// </summary>
+    public static SteamResult<IReadOnlyList<Game>> ParseRecentlyPlayed(string json) =>
+        Parse<RecentlyPlayedEnvelope, IReadOnlyList<Game>>(json, env =>
+        {
+            if (env.Response is null)
+                return SteamResult<IReadOnlyList<Game>>.Fail(SteamErrorKind.InvalidResponse, "Resposta sem 'response'.");
+            IReadOnlyList<Game> games = (env.Response.Games ?? [])
+                .Where(g => g.AppId > 0)
+                .Select(g => new Game(
+                    g.AppId,
+                    string.IsNullOrWhiteSpace(g.Name) ? $"App {g.AppId}" : g.Name,
+                    string.IsNullOrEmpty(g.ImgIconUrl) ? null : g.ImgIconUrl,
+                    g.PlaytimeForever,
+                    // Esta rota costuma não trazer a data; se não vier, fica sem (não inventamos uma).
+                    g.RtimeLastPlayed is > 0 ? DateTimeOffset.FromUnixTimeSeconds(g.RtimeLastPlayed.Value) : null,
+                    null))
+                .ToList();
+            return SteamResult<IReadOnlyList<Game>>.Ok(games);
+        });
+
+    public static SteamResult<ulong?> ParseFamilyGroupForUser(string json) => Parse<FamilyGroupForUserEnvelope, ulong?>(json, env =>
+    {
+        var r = env.Response;
+        if (r is null)
+            return SteamResult<ulong?>.Fail(SteamErrorKind.InvalidResponse, "Resposta sem 'response'.");
+        return r.IsNotMemberOfAnyGroup == true || r.FamilyGroupId is null or 0
+            ? SteamResult<ulong?>.Ok(null)
+            : SteamResult<ulong?>.Ok(r.FamilyGroupId);
+    });
+
+    public static SteamResult<IReadOnlyList<SharedFamilyApp>> ParseSharedLibraryApps(string json) =>
+        Parse<SharedLibraryEnvelope, IReadOnlyList<SharedFamilyApp>>(json, env =>
+        {
+            if (env.Response is null)
+                return SteamResult<IReadOnlyList<SharedFamilyApp>>.Fail(SteamErrorKind.InvalidResponse, "Resposta sem 'response'.");
+            IReadOnlyList<SharedFamilyApp> apps = (env.Response.Apps ?? [])
+                .Where(a => a.AppId > 0)
+                .Select(a => new SharedFamilyApp(
+                    a.AppId,
+                    string.IsNullOrWhiteSpace(a.Name) ? $"App {a.AppId}" : a.Name,
+                    string.IsNullOrEmpty(a.ImgIconHash) ? null : a.ImgIconHash,
+                    a.OwnerSteamIds ?? [],
+                    Math.Max(0, a.RtPlaytime ?? 0),
+                    a.RtLastPlayed is > 0 ? DateTimeOffset.FromUnixTimeSeconds(a.RtLastPlayed.Value) : null))
+                .ToList();
+            return SteamResult<IReadOnlyList<SharedFamilyApp>>.Ok(apps);
+        });
+
     public static SteamResult<IReadOnlyList<AchievementDefinition>> ParseSchema(long appId, string json) =>
         Parse<SchemaEnvelope, IReadOnlyList<AchievementDefinition>>(json, env =>
         {

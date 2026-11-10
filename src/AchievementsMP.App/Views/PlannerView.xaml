@@ -8,7 +8,7 @@
         <conv:NotNullToVisibilityConverter x:Key="NotNullToVisibility" />
 
         <Style x:Key="RarityChip" TargetType="Border" BasedOn="{StaticResource Chip}">
-            <Setter Property="Background" Value="#22FFFFFF" />
+            <Setter Property="Background" Value="{StaticResource NeutralChipBrush}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Rarity}" Value="Common"><Setter Property="Background" Value="#33A4D007" /></DataTrigger>
                 <DataTrigger Binding="{Binding Rarity}" Value="Uncommon"><Setter Property="Background" Value="#3366C0F4" /></DataTrigger>
@@ -129,7 +129,16 @@
                 </StackPanel>
                 <CheckBox IsChecked="{Binding IsDone, Mode=TwoWay}" VerticalAlignment="Center">
                     <StackPanel>
-                        <TextBlock Text="{Binding Title}" TextWrapping="Wrap" FontSize="13">
+                        <!-- Até duas linhas; o resto vira "…" e aparece inteiro ao passar o mouse. -->
+                        <TextBlock Text="{Binding Title}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" FontSize="13"
+                                   LineHeight="18" LineStackingStrategy="BlockLineHeight" MaxHeight="36"
+                                   views:TrimmedTextToolTip.OnlyWhenTrimmed="True" ToolTipService.InitialShowDelay="300"
+                                   ToolTipService.ShowDuration="60000">
+                            <TextBlock.ToolTip>
+                                <ToolTip Style="{StaticResource TextToolTip}">
+                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap" FontSize="13" />
+                                </ToolTip>
+                            </TextBlock.ToolTip>
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
@@ -158,9 +167,11 @@
 
         <StackPanel Margin="0,0,16,0">
             <TextBlock Text="Planejador de 100%" Style="{StaticResource PageTitle}" />
+            <!-- Sem GroupName: o grupo é este StackPanel. Com nome, abas de duas telas do planejador fora de janela
+                 (o WPF junta todas no mesmo grupo) ficavam desmarcando uma à outra sem parar. -->
             <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                <RadioButton Style="{StaticResource TabButton}" GroupName="PlannerTabs" Content="Plano do jogo" IsChecked="{Binding IsGameTab, Mode=TwoWay}" />
-                <RadioButton Style="{StaticResource TabButton}" GroupName="PlannerTabs" Content="Metas" IsChecked="{Binding IsGoalsTab, Mode=TwoWay}" />
+                <RadioButton Style="{StaticResource TabButton}" Content="Plano do jogo" IsChecked="{Binding IsGameTab, Mode=TwoWay}" />
+                <RadioButton Style="{StaticResource TabButton}" Content="Metas" IsChecked="{Binding IsGoalsTab, Mode=TwoWay}" />
             </StackPanel>
         </StackPanel>
 
@@ -192,19 +203,17 @@
                 <StackPanel Grid.Column="1" Margin="0,0,16,0">
                     <TextBlock Text="{Binding Game.Name}" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
                     <TextBlock Text="{Binding Summary}" Style="{StaticResource Body}" FontSize="13" Margin="0,2,0,0" />
-                    <Grid Margin="0,8,0,0">
+                    <Grid Margin="0,8,0,0" DataContext="{Binding Game}" Visibility="{Binding ShowBar, Converter={StaticResource BoolToVisibility}}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" MaxWidth="420" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <ProgressBar Maximum="100" Value="{Binding Game.Percent, Mode=OneWay}" VerticalAlignment="Center"
-                                     Visibility="{Binding Game.ShowBar, Converter={StaticResource BoolToVisibility}}" />
-                        <TextBlock Grid.Column="1" Text="{Binding Game.Percent, StringFormat={}{0:0}%}" FontSize="12" Margin="10,0,0,0"
-                                   Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"
-                                   Visibility="{Binding Game.ShowBar, Converter={StaticResource BoolToVisibility}}" />
+                        <ProgressBar Style="{StaticResource GameProgress}" Maximum="100" Value="{Binding Percent, Mode=OneWay}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource GamePercentText}" Margin="10,0,0,0" VerticalAlignment="Center" />
                     </Grid>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
+                    <Image Style="{StaticResource CompletionTrophy}" DataContext="{Binding Game}" Width="56" Height="56" Margin="0,-4,16,0" />
                     <Button Content="Ver conquistas" Command="{Binding OpenDetailsCommand}" Padding="12,6" Margin="0,0,8,0" />
                     <Button Content="Criar meta de 100%" Command="{Binding CreateGameGoalCommand}" Padding="12,6" Style="{StaticResource PrimaryButton}" />
                 </StackPanel>

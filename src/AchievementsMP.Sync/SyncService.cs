@@ -76,6 +76,16 @@ public sealed class SyncService
                 return await FinishAsync(runId, Failure(owned.Error!, "ler a biblioteca"));
             await _catalog.UpsertLibraryAsync(owned.Value!.Games, _time.GetUtcNow(), isCompleteLibrary: true, ct);
 
+            // 2b. Família Steam. O GetOwnedGames não lista jogo emprestado; o "jogados recentemente" lista (só as últimas
+            // 2 semanas). Jogo recente que não é seu entra como da família. Opcional: se falhar, a biblioteca segue igual.
+            var recent = await CallAsync(c => _steam.GetRecentlyPlayedGamesAsync(steamId.Value, c), throttle, ct);
+            if (recent.IsSuccess)
+            {
+                var ownedIds = owned.Value.Games.Select(g => g.AppId).ToHashSet();
+                var borrowed = recent.Value!.Where(g => !ownedIds.Contains(g.AppId)).ToList();
+                await _catalog.UpsertFamilyGamesAsync(borrowed, _time.GetUtcNow(), ct);
+            }
+
             // 3. Conquistas, só onde precisa.
             var states = await _catalog.GetSyncStatesAsync(ct);
             var tasks = SyncPlanner.Plan(states, settings.Language, _time.GetUtcNow(), _options.Policy, force);

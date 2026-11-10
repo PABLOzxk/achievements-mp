@@ -14,6 +14,7 @@ public sealed class ProfileRepository(SqliteConnectionFactory factory)
     private const string SteamAvatarUrlKey = "profile_steam_avatar_url";
     private const string CustomNameKey = "profile_custom_name";
     private const string CustomAvatarKey = "profile_custom_avatar";
+    private const string ThemeKey = "profile_theme";
 
     /// <summary>
     /// Teto da foto guardada. A que o app grava tem bem menos (PNG de 256 px); maior que isso só vem de um banco
@@ -25,14 +26,26 @@ public sealed class ProfileRepository(SqliteConnectionFactory factory)
     {
         await using var c = await factory.OpenAsync(ct);
         var rows = (await c.QueryAsync<(string Key, byte[]? Value)>(new CommandDefinition(
-            "SELECT key, value FROM settings WHERE key IN (@SteamNameKey, @SteamAvatarUrlKey, @CustomNameKey, @CustomAvatarKey)",
-            new { SteamNameKey, SteamAvatarUrlKey, CustomNameKey, CustomAvatarKey }, cancellationToken: ct)))
+            "SELECT key, value FROM settings WHERE key IN (@SteamNameKey, @SteamAvatarUrlKey, @CustomNameKey, @CustomAvatarKey, @ThemeKey)",
+            new { SteamNameKey, SteamAvatarUrlKey, CustomNameKey, CustomAvatarKey, ThemeKey }, cancellationToken: ct)))
             .ToDictionary(r => r.Key, r => r.Value);
 
         string? Text(string key) => rows.GetValueOrDefault(key) is { Length: > 0 } bytes ? Encoding.UTF8.GetString(bytes) : null;
         var avatar = rows.GetValueOrDefault(CustomAvatarKey) is { Length: > 0 and <= MaxAvatarBytes } image ? image : null;
-        return new UserProfile(Text(SteamNameKey), Text(SteamAvatarUrlKey), Text(CustomNameKey), avatar);
+        return new UserProfile(Text(SteamNameKey), Text(SteamAvatarUrlKey), Text(CustomNameKey), avatar, Text(ThemeKey));
     }
+
+    /// <summary>Só o tema, lido na abertura do app antes da primeira janela (sem carregar a foto).</summary>
+    public async Task<string?> LoadThemeAsync(CancellationToken ct = default)
+    {
+        await using var c = await factory.OpenAsync(ct);
+        var value = await c.ExecuteScalarAsync<byte[]?>(new CommandDefinition(
+            "SELECT value FROM settings WHERE key = @ThemeKey", new { ThemeKey }, cancellationToken: ct));
+        return value is { Length: > 0 and <= 64 } ? Encoding.UTF8.GetString(value) : null;
+    }
+
+    /// <summary>Tema escolhido em "Seu perfil". Nulo = padrão. Vale a partir da próxima abertura do app.</summary>
+    public Task SaveThemeAsync(string? theme, CancellationToken ct = default) => WriteAsync([(ThemeKey, Utf8(theme))], ct);
 
     /// <summary>Nome e foto atuais na Steam. Nulos apagam (perfil não configurado).</summary>
     public Task SaveSteamAsync(string? name, string? avatarUrl, CancellationToken ct = default) =>

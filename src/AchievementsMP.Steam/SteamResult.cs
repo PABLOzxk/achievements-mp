@@ -19,6 +19,8 @@ public enum SteamErrorKind
     /// <summary>Resposta em formato inesperado.</summary>
     InvalidResponse,
     Cancelled,
+    /// <summary>Token de sessão (Família Steam) recusado: expirado, de outra sessão ou colado pela metade.</summary>
+    InvalidAccessToken,
 }
 
 public sealed record SteamError(SteamErrorKind Kind, string Message, TimeSpan? RetryAfter = null)
