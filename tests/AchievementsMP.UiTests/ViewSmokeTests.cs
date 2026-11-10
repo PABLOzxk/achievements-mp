@@ -278,7 +278,11 @@ public class ViewSmokeTests
         Snapshot((FrameworkElement)window.Content, "planejador", new Size(1600, 900));
         var snapshotEditor = new ProfileEditorViewModel(await profiles.LoadAsync(), profiles, shell);
         var snapshotEditorWindow = new ProfileEditorWindow(snapshotEditor);
-        Snapshot((FrameworkElement)snapshotEditorWindow.Content, "editar-perfil", new Size(464, 680));
+        // Cabe numa tela de 1366x768 (tirando barra de tarefas e barra de título): Salvar não pode ficar fora da tela.
+        var editorContent = (FrameworkElement)snapshotEditorWindow.Content;
+        editorContent.Measure(new Size(464, double.PositiveInfinity));
+        Assert.True(editorContent.DesiredSize.Height <= 680, $"“Seu perfil” ficou com {editorContent.DesiredSize.Height:0} px de altura");
+        Snapshot(editorContent, "editar-perfil", new Size(464, 700));
 
         // Tema em "Seu perfil": escolher outro grava e pede reiniciar; salvar sem mudar não pede.
         var themeEditor = new ProfileEditorViewModel(await profiles.LoadAsync(), profiles, shell);
@@ -399,6 +403,11 @@ public class ViewSmokeTests
             Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle);
         }
         var bitmap = new RenderTargetBitmap((int)size.Width, (int)size.Height, 96, 96, PixelFormats.Pbgra32);
+        // Fundo da janela por baixo, como no app: o conteúdo de uma janela não tem fundo próprio.
+        var background = new DrawingVisual();
+        using (var dc = background.RenderOpen())
+            dc.DrawRectangle((Brush)Application.Current.FindResource("WindowBrush"), null, new Rect(size));
+        bitmap.Render(background);
         bitmap.Render(view);
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
