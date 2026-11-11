@@ -22,6 +22,8 @@ Sem instalar: o `AchievementsMP.App-win-Portable.zip` roda de qualquer pasta, ma
 - **Desinstalar** (Configurações do Windows → Aplicativos) remove o programa, mas mantém seus dados em
   `%LocalAppData%\AchievementsMP`. Apague essa pasta se quiser remover tudo.
 - **Privacidade:** veja [PRIVACIDADE.md](PRIVACIDADE.md). Não há servidor do app nem telemetria.
+- **Política de assinatura de código** ([Code signing policy](https://graceforge.com.br/projetos/achievements-mp-code-signing-policy)):
+  o que é assinado, como cada versão é gerada e aprovada, e quem faz o quê.
 
 ## Estado atual: as 5 fases do plano concluídas
 

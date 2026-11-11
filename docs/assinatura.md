@@ -8,6 +8,7 @@ como liberar um app só: ou o programa vem assinado, ou a pessoa desliga a prote
 o controle confere cada `.exe` e `.dll` que o Windows carrega, inclusive depois de instalado.
 
 A assinatura é pedida à [SignPath Foundation](https://signpath.org), que assina de graça projetos de código aberto.
+A política pública fica no site: [Code signing policy](https://graceforge.com.br/projetos/achievements-mp-code-signing-policy).
 
 ## O que é assinado
 
