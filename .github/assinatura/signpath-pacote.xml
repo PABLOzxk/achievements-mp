@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Configuração de artefato "pacote" na SignPath: os arquivos que a 1ª passada do vpk separa (arquivos.txt).
+     Cada include exige exatamente um arquivo com esse nome; se a lista mudar, mude os dois juntos. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file-set>
+      <!-- Código deste repositório -->
+      <include path="AchievementsMP.exe" />
+      <include path="AchievementsMP.dll" />
+      <include path="AchievementsMP.Core.dll" />
+      <include path="AchievementsMP.Data.dll" />
+      <include path="AchievementsMP.Steam.dll" />
+      <include path="AchievementsMP.Sync.dll" />
+      <!-- Gerados pelo vpk a partir do Velopack (MIT) para este app: atualizador e lançador dos atalhos -->
+      <include path="Squirrel.exe" />
+      <include path="*_ExecutionStub.exe" />
+      <for-each>
+        <authenticode-sign />
+      </for-each>
+    </pe-file-set>
+  </zip-file>
+</artifact-configuration>
