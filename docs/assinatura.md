@@ -17,7 +17,7 @@ Das 14 restantes:
 | Arquivo | Origem | Assinado? |
 | --- | --- | --- |
 | `AchievementsMP.exe`, `AchievementsMP.dll`, `.Core`, `.Data`, `.Steam`, `.Sync` | este repositório | sim |
-| `Squirrel.exe` (vira o `Update.exe`) e `Achievements MP_ExecutionStub.exe` (vira o lançador dos atalhos) | gerados pelo vpk a partir do Velopack (MIT) | sim, se a SignPath aceitar (ver abaixo) |
+| `Squirrel.exe` (vira o `Update.exe`) e `Achievements MP_ExecutionStub.exe` (vira o `Achievements MP.exe` da raiz, que os atalhos abrem) | gerados pelo vpk a partir do Velopack (MIT) | sim, se a SignPath aceitar (ver abaixo) |
 | `AchievementsMP.App-win-Setup.exe` | gerado pelo vpk: instalador do Velopack com o pacote dentro | sim |
 | `Dapper.dll`, `SQLitePCLRaw.*.dll`, `e_sqlite3.dll`, `Velopack.dll` | bibliotecas de terceiros | não: a SignPath só assina código do próprio projeto |
 

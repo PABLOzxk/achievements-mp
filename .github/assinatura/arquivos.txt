@@ -14,7 +14,7 @@ AchievementsMP.Sync.dll
 
 # Gerados pelo vpk para este app a partir dos binários do Velopack (MIT), que vêm sem assinatura de origem.
 # Squirrel.exe vira o Update.exe da instalação (aplica atualizações e desinstala) e o *_ExecutionStub.exe vira o
-# AchievementsMP.exe da raiz, que os atalhos abrem. Sem assinatura, o Controle Inteligente de Aplicativos do
+# "Achievements MP.exe" da raiz, que os atalhos abrem. Sem assinatura, o Controle Inteligente de Aplicativos do
 # Windows 11 bloqueia os dois. Dependem do aceite da SignPath: ver docs/assinatura.md.
 Squirrel.exe
 *_ExecutionStub.exe
