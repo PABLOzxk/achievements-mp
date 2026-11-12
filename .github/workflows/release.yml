@@ -3,6 +3,8 @@ name: Release
 # Gera o instalador (Velopack) e publica nas Releases do GitHub, de onde o app instalado se atualiza.
 # Tag vX.Y.Z (igual à <Version> do app) publica de vez; o disparo manual cria um rascunho, que só aparece
 # para quem tem acesso ao repositório.
+# Assinatura digital pela SignPath Foundation quando o repositório tiver a variável SIGNPATH_ORGANIZATION_ID;
+# como funciona e como configurar em docs/assinatura.md.
 on:
   push:
     tags: ['v*']
@@ -12,9 +14,15 @@ on:
         description: 'Publicar de vez (desmarcado = rascunho)'
         type: boolean
         default: false
+      assinatura:
+        description: 'Assinatura (auto = SignPath, se configurada; ensaio = certificado de teste, não envia nada)'
+        type: choice
+        options: [auto, ensaio, nenhuma]
+        default: auto
 
 permissions:
   contents: write
+  actions: read # a SignPath confere de qual execução veio o artefato e baixa ele daqui
 
 env:
   VPK_VERSION: '1.2.161'   # igual ao pacote Velopack do app
@@ -23,6 +31,8 @@ env:
 jobs:
   release:
     runs-on: windows-latest
+    env:
+      ASSINATURA_DIR: ${{ github.workspace }}/assinatura
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v5
@@ -40,10 +50,32 @@ jobs:
             exit 1
           fi
 
+      # signpath: assina de verdade (duas aprovações manuais na SignPath por versão).
+      # ensaio: certificado de teste criado na hora, para conferir o caminho todo; nada vai para as Releases.
+      # nenhuma: como antes, sem assinatura.
+      - name: Modo de assinatura
+        id: modo
+        shell: bash
+        env:
+          ESCOLHA: ${{ inputs.assinatura }}
+          SIGNPATH_ORG: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+        run: |
+          modo="${ESCOLHA:-auto}"
+          if [[ "$modo" == "auto" ]]; then
+            if [[ -n "$SIGNPATH_ORG" ]]; then modo=signpath; else modo=nenhuma; fi
+          fi
+          echo "modo=$modo" >> "$GITHUB_OUTPUT"
+          echo "Assinatura: $modo"
+          if [[ "$modo" == "nenhuma" ]]; then
+            echo "::warning::Instalador sem assinatura digital: o Controle Inteligente de Aplicativos do Windows 11 bloqueia."
+          fi
+
       # Rascunho aprovado e publicado no site cria a tag e dispara este fluxo de novo: aí não há nada a fazer.
       # Rascunho antigo da mesma versão é apagado para dar lugar ao novo (o vpk recusa tag repetida).
+      # O ensaio não envia nada, então não mexe nas Releases.
       - name: Conferir o que já foi enviado
         id: existing
+        if: steps.modo.outputs.modo != 'ensaio'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -76,22 +108,81 @@ jobs:
         if: steps.existing.outputs.skip != 'true'
         run: dotnet publish src/AchievementsMP.App -c Release -r win-x64 --self-contained true -p:DebugType=none -o publish
 
+      - name: Instalar o vpk
+        if: steps.existing.outputs.skip != 'true'
+        run: dotnet tool install vpk --version "$env:VPK_VERSION" --tool-path .tools
+
+      # A SignPath assina fora do vpk e espera aprovação, então o pacote é montado duas vezes. Esta 1ª passada só
+      # separa os arquivos que o vpk assinaria e que são do projeto (.github/assinatura/arquivos.txt), sem assinar.
+      - name: Empacotar (1ª passada, separar o que assinar)
+        if: steps.existing.outputs.skip != 'true' && steps.modo.outputs.modo != 'nenhuma'
+        shell: bash
+        run: |
+          ./.tools/vpk pack -u "$PACK_ID" -v "${{ steps.version.outputs.version }}" -p publish -e AchievementsMP.exe \
+            --packTitle "Achievements MP" --packAuthors "PABLOzxk" -i src/AchievementsMP.App/Assets/app.ico -o ReleasesColeta \
+            --signTemplate "pwsh -NoProfile -File $GITHUB_WORKSPACE/.github/assinatura/vpk-assinar.ps1 coletar {{file...}}"
+          ls -la "$ASSINATURA_DIR/pedido"
+
+      - name: Enviar para assinar (arquivos do app)
+        id: pedido-app
+        if: steps.existing.outputs.skip != 'true' && steps.modo.outputs.modo == 'signpath'
+        uses: actions/upload-artifact@v6
+        with:
+          name: assinar-app
+          path: assinatura/pedido/
+          if-no-files-found: error
+          retention-days: 1
+
+      # Fica esperando a aprovação manual no painel da SignPath (até 2 horas).
+      - name: Assinar na SignPath (arquivos do app)
+        if: steps.existing.outputs.skip != 'true' && steps.modo.outputs.modo == 'signpath'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'achievements-mp' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: pacote
+          github-artifact-id: ${{ steps.pedido-app.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 7200
+          output-artifact-directory: assinatura/assinado
+
+      - name: Assinar com certificado de teste (arquivos do app)
+        if: steps.modo.outputs.modo == 'ensaio'
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .github/assinatura/assinar-ensaio.ps1 `
+            -Origem "$env:ASSINATURA_DIR/pedido" -Destino "$env:ASSINATURA_DIR/assinado"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Empacotar
         if: steps.existing.outputs.skip != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MODO: ${{ steps.modo.outputs.modo }}
         run: |
-          dotnet tool install vpk --version "$VPK_VERSION" --tool-path .tools
-          # A última versão publicada permite gerar o pacote delta (atualização pequena).
-          ./.tools/vpk download github --repoUrl "https://github.com/${{ github.repository }}" --token "$GH_TOKEN" -o Releases \
-            || echo "Nenhuma versão anterior publicada; só o pacote completo."
+          # A última versão publicada permite gerar o pacote delta (atualização pequena). O ensaio pode repetir uma
+          # versão já publicada, então não baixa nada.
+          if [[ "$MODO" != "ensaio" ]]; then
+            ./.tools/vpk download github --repoUrl "https://github.com/${{ github.repository }}" --token "$GH_TOKEN" -o Releases \
+              || echo "Nenhuma versão anterior publicada; só o pacote completo."
+          fi
           notes=()
           if [[ -f "docs/notas/v${{ steps.version.outputs.version }}.md" ]]; then
             notes=(--releaseNotes "docs/notas/v${{ steps.version.outputs.version }}.md")
           fi
+          # 2ª passada: cada arquivo separado na 1ª é trocado pelo assinado antes de entrar no pacote.
+          sign=()
+          if [[ "$MODO" != "nenhuma" ]]; then
+            sign=(--signTemplate "pwsh -NoProfile -File $GITHUB_WORKSPACE/.github/assinatura/vpk-assinar.ps1 trocar {{file...}}")
+          fi
           ./.tools/vpk pack -u "$PACK_ID" -v "${{ steps.version.outputs.version }}" -p publish -e AchievementsMP.exe \
-            --packTitle "Achievements MP" --packAuthors "PABLOzxk" -i src/AchievementsMP.App/Assets/app.ico -o Releases "${notes[@]}"
+            --packTitle "Achievements MP" --packAuthors "PABLOzxk" -i src/AchievementsMP.App/Assets/app.ico -o Releases \
+            "${notes[@]}" "${sign[@]}"
+          if [[ "$MODO" != "nenhuma" ]]; then
+            pwsh -NoProfile -File .github/assinatura/vpk-assinar.ps1 conferir
+          fi
           # Versão seguinte só para o teste de atualização abaixo; fica em outra pasta e nunca é enviada.
           IFS=. read -r major minor patch <<< "${{ steps.version.outputs.version }}"
           next="$major.$minor.$((patch + 1))-teste"
@@ -99,11 +190,80 @@ jobs:
           ./.tools/vpk pack -u "$PACK_ID" -v "$next" -p publish -e AchievementsMP.exe \
             --packTitle "Achievements MP" --packAuthors "PABLOzxk" -i src/AchievementsMP.App/Assets/app.ico -o ReleasesTeste
 
+      # O Setup.exe embute o pacote já assinado, então só pode ser assinado agora (2ª aprovação na SignPath).
+      - name: Separar o instalador para assinar
+        if: steps.existing.outputs.skip != 'true' && steps.modo.outputs.modo != 'nenhuma'
+        shell: pwsh
+        run: |
+          $dir = New-Item -ItemType Directory -Force "$env:ASSINATURA_DIR/instalador"
+          Copy-Item Releases/*-Setup.exe $dir
+
+      - name: Enviar para assinar (instalador)
+        id: pedido-instalador
+        if: steps.existing.outputs.skip != 'true' && steps.modo.outputs.modo == 'signpath'
+        uses: actions/upload-artifact@v6
+        with:
+          name: assinar-instalador
+          path: assinatura/instalador/
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Assinar na SignPath (instalador)
+        if: steps.existing.outputs.skip != 'true' && steps.modo.outputs.modo == 'signpath'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'achievements-mp' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: instalador
+          github-artifact-id: ${{ steps.pedido-instalador.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 7200
+          output-artifact-directory: assinatura/instalador-assinado
+
+      - name: Assinar com certificado de teste (instalador)
+        if: steps.modo.outputs.modo == 'ensaio'
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .github/assinatura/assinar-ensaio.ps1 `
+            -Origem "$env:ASSINATURA_DIR/instalador" -Destino "$env:ASSINATURA_DIR/instalador-assinado"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # Confere no Windows (não só se tem assinatura, mas se ela vale) o instalador e cada arquivo do pacote.
+      - name: Conferir assinaturas
+        if: steps.existing.outputs.skip != 'true' && steps.modo.outputs.modo != 'nenhuma'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          Copy-Item "$env:ASSINATURA_DIR/instalador-assinado/*-Setup.exe" Releases -Force
+          $setup = Get-ChildItem Releases -Filter "*-Setup.exe" | Select-Object -First 1
+          $s = Get-AuthenticodeSignature -LiteralPath $setup.FullName
+          if ($s.Status -ne "Valid") { throw "Instalador sem assinatura válida: $($s.Status) $($s.StatusMessage)" }
+          Write-Host "$($setup.Name): $($s.SignerCertificate.Subject)"
+
+          $pacote = Join-Path $env:RUNNER_TEMP "pacote"
+          $full = Get-ChildItem Releases -Filter "*-${{ steps.version.outputs.version }}-full.nupkg" | Select-Object -First 1
+          [IO.Compression.ZipFile]::ExtractToDirectory($full.FullName, $pacote, $true)
+          $nossos = Get-ChildItem -LiteralPath "$env:ASSINATURA_DIR/pedido" -File | ForEach-Object Name
+          $semAssinatura = @()
+          foreach ($f in Get-ChildItem $pacote -Recurse -File -Include *.exe, *.dll) {
+            $sig = Get-AuthenticodeSignature -LiteralPath $f.FullName
+            if ($f.Name -in $nossos) {
+              if ($sig.Status -ne "Valid") { throw "$($f.Name) ficou sem assinatura válida: $($sig.Status)" }
+              Write-Host "Assinado: $($f.Name)"
+            } elseif ($sig.Status -ne "Valid") {
+              $semAssinatura += "$($f.Name) ($($sig.Status))"
+            }
+          }
+          Write-Host "Sem assinatura no pacote (bibliotecas de terceiros): $($semAssinatura -join ', ')"
+
       # Como um usuário que já tem dados: instala, atualiza para uma versão nova e desinstala.
       # Em nenhum momento a pasta de dados (%LocalAppData%\AchievementsMP) pode ser tocada.
       - name: Testar instalação, atualização e desinstalação
         if: steps.existing.outputs.skip != 'true'
         shell: pwsh
+        env:
+          MODO: ${{ steps.modo.outputs.modo }}
         run: |
           $ErrorActionPreference = "Stop"
           $logs = $env:RUNNER_TEMP
@@ -130,6 +290,14 @@ jobs:
           if ($root -like "$data\*") { throw "Instalou dentro da pasta de dados do app" }
           $installed = Get-Content "$root\current\sq.version" -Raw
           if ($installed -notmatch "<version>${{ steps.version.outputs.version }}</version>") { $installed; throw "Versão instalada errada" }
+          # O que o Windows vai executar depois de instalado: atualizador e lançador dos atalhos (na raiz) e o app.
+          if ($env:MODO -ne "nenhuma") {
+            foreach ($f in @(Get-ChildItem $root -File -Filter *.exe) + @(Get-Item "$root\current\AchievementsMP.exe")) {
+              $sig = Get-AuthenticodeSignature -LiteralPath $f.FullName
+              if ($sig.Status -ne "Valid") { throw "$($f.FullName) instalado sem assinatura válida: $($sig.Status)" }
+              Write-Host "Assinatura válida depois de instalar: $($f.FullName)"
+            }
+          }
 
           # 2. Atualizar, pelo mesmo Update.exe que o app usa
           $package = Get-ChildItem ReleasesTeste -Filter "*-full.nupkg" | Select-Object -First 1
@@ -149,7 +317,7 @@ jobs:
           Write-Host "Dados do usuário intactos: $((Get-ChildItem $data -Recurse -File).Count) arquivo(s) em $data"
 
       - name: Enviar para as Releases
-        if: steps.existing.outputs.skip != 'true'
+        if: steps.existing.outputs.skip != 'true' && steps.modo.outputs.modo != 'ensaio'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

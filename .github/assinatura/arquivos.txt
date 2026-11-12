@@ -1,0 +1,20 @@
+# Arquivos que vão para a SignPath assinar, pelo nome exato (aceita * e ?). Um por linha.
+# Tem que bater com a configuração de artefato "pacote" cadastrada na SignPath (signpath-pacote.xml, nesta pasta).
+#
+# Bibliotecas de terceiros (Dapper, SQLitePCLRaw, e_sqlite3, Velopack.dll) NÃO entram: a SignPath só assina código
+# do próprio projeto. As do .NET e do WPF já vêm assinadas pela Microsoft.
+
+# Código deste repositório
+AchievementsMP.exe
+AchievementsMP.dll
+AchievementsMP.Core.dll
+AchievementsMP.Data.dll
+AchievementsMP.Steam.dll
+AchievementsMP.Sync.dll
+
+# Gerados pelo vpk para este app a partir dos binários do Velopack (MIT), que vêm sem assinatura de origem.
+# Squirrel.exe vira o Update.exe da instalação (aplica atualizações e desinstala) e o *_ExecutionStub.exe vira o
+# "Achievements MP.exe" da raiz, que os atalhos abrem. Sem assinatura, o Controle Inteligente de Aplicativos do
+# Windows 11 bloqueia os dois. Dependem do aceite da SignPath: ver docs/assinatura.md.
+Squirrel.exe
+*_ExecutionStub.exe
