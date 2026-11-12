@@ -7,15 +7,31 @@ digital é bloqueado sem botão para continuar ("não conseguimos verificar seu 
 como liberar um app só: ou o programa vem assinado, ou a pessoa desliga a proteção. E não basta assinar o instalador:
 o controle confere cada `.exe` e `.dll` que o Windows carrega, inclusive depois de instalado.
 
-A assinatura é pedida à [SignPath Foundation](https://signpath.org), que assina de graça projetos de código aberto.
-A política pública fica no site: [Code signing policy](https://graceforge.com.br/projetos/achievements-mp-code-signing-policy).
+## Estado
 
-## O que é assinado
+Nenhuma versão publicada tem assinatura digital.
+
+A [SignPath Foundation](https://signpath.org), que assina de graça projetos de código aberto, recusou o pedido em
+12/11/2026. O motivo foi a falta de sinais públicos de confiança: estrelas, forks, contribuidores, artigos e
+discussões. Eles disseram que não é juízo sobre a qualidade e que o projeto pode pedir de novo quando for mais
+conhecido.
+
+Decisão de 12/11/2026: ganhar visibilidade e pedir de novo à SignPath mais adiante. Também foram avaliados um
+certificado próprio (Certum Open Source, cerca de 49 euros por ano), a Microsoft Store (MSIX) e um certificado pago
+com assinatura na nuvem. Ficam como alternativa se o novo pedido demorar ou for recusado. Enquanto isso, a
+integração com a SignPath descrita abaixo continua no workflow, desligada. Sem a variável `SIGNPATH_ORGANIZATION_ID`,
+o Release sai sem assinatura, como antes.
+
+Para o novo pedido, a SignPath disse o que procura: estrelas, forks e contribuidores no GitHub, artigos e menções
+independentes, discussões (Reddit, YouTube, Stack Overflow) e atividade constante no projeto. Para voltar a pedir,
+o site precisa republicar a página "Code signing policy", e o README precisa voltar a apontar para ela.
+
+## O que precisa de assinatura
 
 Das 412 peças executáveis do pacote da 0.9.0, 398 já vêm assinadas pela Microsoft (.NET e WPF) ou pelos autores.
 Das 14 restantes:
 
-| Arquivo | Origem | Assinado? |
+| Arquivo | Origem | Entra na assinatura? |
 | --- | --- | --- |
 | `AchievementsMP.exe`, `AchievementsMP.dll`, `.Core`, `.Data`, `.Steam`, `.Sync` | este repositório | sim |
 | `Squirrel.exe` (vira o `Update.exe`) e `Achievements MP_ExecutionStub.exe` (vira o `Achievements MP.exe` da raiz, que os atalhos abrem) | gerados pelo vpk a partir do Velopack (MIT) | sim, se a SignPath aceitar (ver abaixo) |
@@ -24,9 +40,10 @@ Das 14 restantes:
 
 **Ponto em aberto:** os binários do Velopack vêm sem assinatura de origem, e as regras da SignPath não permitem
 assinar código de terceiros. Sem assinatura, o atualizador e o lançador dos atalhos seriam bloqueados pelo controle
-do Windows (o app não abriria pelo atalho, não atualizaria nem desinstalaria). Isso precisa ser perguntado à SignPath
-na inscrição. As bibliotecas de terceiros são distribuídas idênticas em milhares de apps e a Microsoft provavelmente
-já as conhece, mas só um teste num PC com o controle ligado confirma.
+do Windows (o app não abriria pelo atalho, não atualizaria nem desinstalaria). A pergunta foi feita na inscrição e
+ficou sem resposta na recusa. Com um certificado próprio o problema some, porque o vpk assina tudo, inclusive esses
+dois. As bibliotecas de terceiros são distribuídas idênticas em milhares de apps e a
+Microsoft provavelmente já as conhece, mas só um teste num PC com o controle ligado confirma.
 
 ## Como funciona no workflow Release
 
@@ -48,7 +65,7 @@ veio cada pedido.
 criado na hora, sem a SignPath e sem enviar nada às Releases. Serve para conferir o caminho depois de mexer no
 empacotamento.
 
-## Configurar depois que a SignPath aprovar
+## Configurar se a SignPath aprovar um pedido futuro
 
 Na SignPath:
 

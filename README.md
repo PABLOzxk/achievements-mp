@@ -22,14 +22,12 @@ Sem instalar: o `AchievementsMP.App-win-Portable.zip` roda de qualquer pasta, ma
 - **Desinstalar** (Configurações do Windows → Aplicativos) remove o programa, mas mantém seus dados em
   `%LocalAppData%\AchievementsMP`. Apague essa pasta se quiser remover tudo.
 - **Privacidade:** veja [PRIVACIDADE.md](PRIVACIDADE.md). Não há servidor do app nem telemetria.
-- **Política de assinatura de código** ([Code signing policy](https://graceforge.com.br/projetos/achievements-mp-code-signing-policy)):
-  o que é assinado, como cada versão é gerada e aprovada, e quem faz o quê.
 
 ## Estado atual: as 5 fases do plano concluídas
 
 | Pronto | Ainda não |
 | --- | --- |
-| Solução .NET 10 (LTS) em camadas, SQLite com migrações e backup | Assinatura digital do instalador (pedida à SignPath Foundation; ver [docs/assinatura.md](docs/assinatura.md)) |
+| Solução .NET 10 (LTS) em camadas, SQLite com migrações e backup | Assinatura digital do instalador (a SignPath Foundation recusou o pedido em 12/11/2026; o plano é pedir de novo mais adiante, ver [docs/assinatura.md](docs/assinatura.md)) |
 | Sincronização incremental com a Steam (biblioteca, conquistas, raridade) | |
 | Biblioteca: busca, filtros (situação, viabilidade, lista) e 6 ordenações | |
 | Detalhes do jogo: conquistas com estado, data e raridade global | |
@@ -108,8 +106,9 @@ campanha parecem raras só porque muita gente abandona antes. É um indicador pa
 3. Baixe o `Setup.exe` do rascunho e teste. Se estiver bom, clique em **Publish release** no rascunho. A partir daí
    o app instalado de quem já usa encontra a versão nova sozinho.
 
-Com a assinatura configurada ([docs/assinatura.md](docs/assinatura.md)), o workflow para duas vezes esperando a
-aprovação no painel da SignPath: primeiro os arquivos do app, depois o instalador.
+O workflow já sabe pedir a assinatura à SignPath, mas isso fica desligado enquanto não houver projeto aceito lá
+([docs/assinatura.md](docs/assinatura.md)). Ligado, ele para duas vezes esperando a aprovação no painel da SignPath:
+primeiro os arquivos do app, depois o instalador.
 
 Rodar o workflow de novo para a mesma versão substitui o rascunho. Uma versão publicada nunca é substituída: suba a
 `<Version>`. Também dá para publicar direto, sem rascunho, enviando a tag (`git tag vX.Y.Z && git push origin vX.Y.Z`).
