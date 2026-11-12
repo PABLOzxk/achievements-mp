@@ -16,9 +16,15 @@ A [SignPath Foundation](https://signpath.org), que assina de graça projetos de 
 discussões. Eles disseram que não é juízo sobre a qualidade e que o projeto pode pedir de novo quando for mais
 conhecido.
 
-O próximo caminho está em decisão: certificado próprio (Certum Open Source), Microsoft Store (MSIX) ou novo pedido à
-SignPath mais adiante. A integração com a SignPath descrita abaixo continua no workflow, desligada. Sem a variável
-`SIGNPATH_ORGANIZATION_ID`, o Release sai sem assinatura, como antes.
+Decisão de 12/11/2026: ganhar visibilidade e pedir de novo à SignPath mais adiante. Também foram avaliados um
+certificado próprio (Certum Open Source, cerca de 49 euros por ano), a Microsoft Store (MSIX) e um certificado pago
+com assinatura na nuvem. Ficam como alternativa se o novo pedido demorar ou for recusado. Enquanto isso, a
+integração com a SignPath descrita abaixo continua no workflow, desligada. Sem a variável `SIGNPATH_ORGANIZATION_ID`,
+o Release sai sem assinatura, como antes.
+
+Para o novo pedido, a SignPath disse o que procura: estrelas, forks e contribuidores no GitHub, artigos e menções
+independentes, discussões (Reddit, YouTube, Stack Overflow) e atividade constante no projeto. Para voltar a pedir,
+o site precisa republicar a página "Code signing policy", e o README precisa voltar a apontar para ela.
 
 ## O que precisa de assinatura
 

@@ -27,7 +27,7 @@ Sem instalar: o `AchievementsMP.App-win-Portable.zip` roda de qualquer pasta, ma
 
 | Pronto | Ainda não |
 | --- | --- |
-| Solução .NET 10 (LTS) em camadas, SQLite com migrações e backup | Assinatura digital do instalador (a SignPath Foundation recusou o pedido em 12/11/2026; ver [docs/assinatura.md](docs/assinatura.md)) |
+| Solução .NET 10 (LTS) em camadas, SQLite com migrações e backup | Assinatura digital do instalador (a SignPath Foundation recusou o pedido em 12/11/2026; o plano é pedir de novo mais adiante, ver [docs/assinatura.md](docs/assinatura.md)) |
 | Sincronização incremental com a Steam (biblioteca, conquistas, raridade) | |
 | Biblioteca: busca, filtros (situação, viabilidade, lista) e 6 ordenações | |
 | Detalhes do jogo: conquistas com estado, data e raridade global | |
